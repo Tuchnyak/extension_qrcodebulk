@@ -16,6 +16,7 @@ This document outlines the technical specification for a Chrome browser extensio
     - A checkbox labeled "Show URL".
     - Default state: Unchecked.
     - When checked, a read-only text field with the full URL appears below the QR code.
+    - When checked, any exported image (Copy, Save as..., Quick Save) includes the URL as a caption rendered under the QR code.
 3.  **Image Size Input**:
     - A number input field allowing the user to specify the side length of the QR code image in pixels.
     - Default value: `512`.
@@ -27,6 +28,7 @@ This document outlines the technical specification for a Chrome browser extensio
     - **"Save as..."**:
         - Opens the system's "Save as" dialog.
         - Image size is determined by the value in the **Image Size Input** field.
+        - Implemented via `chrome.downloads.download({ saveAs: true })`.
     - **"Copy to clipboard"**:
         - Copies the QR code image to the system clipboard.
         - Image size is determined by the value in the **Image Size Input** field.
@@ -37,8 +39,8 @@ The extension will use a minimal and efficient architecture consisting only of a
 
 - **`manifest.json`**:
     - Defines the extension's properties, permissions, and entry points.
-    - **Permissions**: Requires the `activeTab` permission to access the URL of the currently active tab when the user interacts with the extension. This is a lightweight permission that does not require invasive warnings upon installation.
-    - **Action**: Defines the `default_popup` as `popup.html` and specifies the extension icons.
+    - **Permissions**: Requires `activeTab` (to read the current tab URL) and `downloads` (for Quick Save and Save as...).
+    - **Action**: Defines the `default_popup` as the built popup HTML served from `dist/`.
 - **Popup Scripts (`popup.html`, `popup.js`, `popup.css`)**:
     - `popup.html`: Contains the structure of the popup UI.
     - `popup.css`: Contains the styles for the popup UI.
@@ -47,6 +49,7 @@ The extension will use a minimal and efficient architecture consisting only of a
         - Handling user interactions (button clicks, checkbox toggles, input changes).
         - Calling the QR code generation library.
         - Implementing the save and copy functionalities.
+    - Build: Source files live under `src/` and are bundled to `dist/` using `esbuild`. The QR library is consumed as an npm dependency (`qrcode`).
 
 A background script is not necessary for this initial version, as no background processing or state management is required.
 
@@ -55,6 +58,7 @@ A background script is not necessary for this initial version, as no background 
 - **URL Acquisition**: The URL of the active tab will be retrieved using the `chrome.tabs.query({active: true, currentWindow: true})` API call within `popup.js`.
 - **QR Code Generation**: A well-maintained, third-party JavaScript library (e.g., `qrcode`) will be used for generating the QR code data.
 - **User Input Validation**: The value from the **Image Size Input** field should be validated. If the input is not a positive integer, the default value of `512` should be used for the "Save as..." and "Copy" operations.
+ - **Caption Rendering**: If "Show URL" is enabled, exports compose a larger canvas: QR of the requested size on top, plus a text caption area below with wrapping and a white background for readability.
 
 ## 5. Error Handling
 
@@ -73,8 +77,9 @@ A manual testing plan should be executed to ensure quality before release.
 | 4 | **"Quick Save" Button**                | Click "Quick Save". A `512x512` PNG file is saved to `Downloads/qr-codes/`.                                    |
 | 5 | **"Save as..." Button**                | Change size to `1024`. Click "Save as...". The "Save as" dialog appears. The saved file is `1024x1024`.        |
 | 6 | **"Copy to clipboard" Button**         | Change size to `256`. Click "Copy". Paste into an image editor. The pasted image is `256x256`.                  |
-| 7 | **Invalid Page**                       | Open `chrome://extensions` and click the icon. The popup shows the specified error message.                  |
-| 8 | **Invalid Size Input**                 | Enter "abc" in the size field and click "Save as...". The dialog opens to save a `512x512` image.              |
+| 7 | **Caption When Enabled**               | Enable "Show URL". Use Copy/Save/Quick Save. Exported image contains the URL caption under the QR.             |
+| 8 | **Invalid Page**                       | Open `chrome://extensions` and click the icon. The popup shows the specified error message.                  |
+| 9 | **Invalid Size Input**                 | Enter "abc" in the size field and click "Save as...". The dialog opens to save a `512x512` image.              |
 
 ## 7. Future Enhancements (Post-V1)
 

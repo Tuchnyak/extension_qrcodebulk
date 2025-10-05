@@ -1,0 +1,19 @@
+{
+  "name": "qrcode",
+  "version": "1.0.0",
+  "main": "popup.js",
+  "scripts": {
+    "build": "esbuild src/popup.js --bundle --outfile=dist/popup.js && copyfiles -u 1 src/*.html src/*.css dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "copyfiles": "^2.4.1",
+    "esbuild": "^0.25.10"
+  }
+}
