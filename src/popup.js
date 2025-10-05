@@ -78,7 +78,8 @@ function wireUpUi(url) {
         copyBtn.addEventListener('click', async () => {
             const requestedSize = parseSizeInput(sizeInput.value);
             try {
-                const canvas = await generateQrCanvas(url, requestedSize);
+                const includeCaption = !!(showUrlCheckbox && showUrlCheckbox.checked);
+                const canvas = await generateExportCanvas(url, requestedSize, includeCaption, url);
                 await new Promise((resolve, reject) => {
                     canvas.toBlob((blob) => {
                         if (!blob) {
@@ -101,7 +102,8 @@ function wireUpUi(url) {
         saveAsBtn.addEventListener('click', async () => {
             const requestedSize = parseSizeInput(sizeInput.value);
             try {
-                const canvas = await generateQrCanvas(url, requestedSize);
+                const includeCaption = !!(showUrlCheckbox && showUrlCheckbox.checked);
+                const canvas = await generateExportCanvas(url, requestedSize, includeCaption, url);
                 const dataUrl = canvas.toDataURL('image/png');
                 if (chrome && chrome.downloads && typeof chrome.downloads.download === 'function') {
                     chrome.downloads.download({
@@ -129,7 +131,8 @@ function wireUpUi(url) {
         quickSaveBtn.addEventListener('click', async () => {
             const defaultSize = 512;
             try {
-                const canvas = await generateQrCanvas(url, defaultSize);
+                const includeCaption = !!(showUrlCheckbox && showUrlCheckbox.checked);
+                const canvas = await generateExportCanvas(url, defaultSize, includeCaption, url);
                 const dataUrl = canvas.toDataURL('image/png');
                 if (chrome && chrome.downloads && typeof chrome.downloads.download === 'function') {
                     chrome.downloads.download({
@@ -174,4 +177,63 @@ function flashButton(buttonEl, tempText) {
         buttonEl.textContent = originalText;
         buttonEl.disabled = false;
     }, 1200);
+}
+
+async function generateExportCanvas(qrText, qrSize, includeCaption, captionText) {
+    const qrCanvas = await generateQrCanvas(qrText, qrSize);
+    if (!includeCaption) return qrCanvas;
+
+    const horizontalPaddingPx = Math.round(Math.max(8, qrSize * 0.02));
+    const verticalPaddingPx = Math.round(Math.max(8, qrSize * 0.02));
+    const fontSizePx = Math.max(10, Math.min(18, Math.round(qrSize * 0.035)));
+    const lineHeightPx = Math.round(fontSizePx * 1.3);
+    const maxTextWidthPx = qrSize - horizontalPaddingPx * 2;
+
+    const ctxMeasure = document.createElement('canvas').getContext('2d');
+    ctxMeasure.font = `${fontSizePx}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
+    const lines = wrapTextToWidth(ctxMeasure, captionText, maxTextWidthPx);
+    const captionHeightPx = verticalPaddingPx + lines.length * lineHeightPx + verticalPaddingPx;
+
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = qrSize;
+    outCanvas.height = qrSize + captionHeightPx;
+    const ctx = outCanvas.getContext('2d');
+
+    // Draw QR (already has white modules/background as produced by library)
+    ctx.drawImage(qrCanvas, 0, 0);
+
+    // Draw caption background white to ensure readability
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, qrSize, outCanvas.width, captionHeightPx);
+
+    // Draw caption text
+    ctx.fillStyle = '#000000';
+    ctx.font = `${fontSizePx}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
+    ctx.textBaseline = 'top';
+    let y = qrSize + verticalPaddingPx;
+    const x = horizontalPaddingPx;
+    for (const line of lines) {
+        ctx.fillText(line, x, y);
+        y += lineHeightPx;
+    }
+
+    return outCanvas;
+}
+
+function wrapTextToWidth(ctx, text, maxWidth) {
+    // URLs can be long without spaces: break by characters
+    const lines = [];
+    let currentLine = '';
+    for (let i = 0; i < text.length; i += 1) {
+        const nextLine = currentLine + text[i];
+        const metrics = ctx.measureText(nextLine);
+        if (metrics.width <= maxWidth || currentLine.length === 0) {
+            currentLine = nextLine;
+        } else {
+            lines.push(currentLine);
+            currentLine = text[i];
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
 }
