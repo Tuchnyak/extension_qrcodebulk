@@ -16,7 +16,7 @@
 - **Manifest**: Version 3.
 - **Architecture**: Simple popup-based. No background script for V1.
 - **Permissions**: `activeTab`, `downloads`.
-- **Dependencies**: `qrcode.js` library, to be included locally.
+- **Dependencies**: npm `qrcode` bundled via `esbuild` into `dist/popup.js`.
 
 ## Key Design Decisions (V1)
 - **UI**: A popup window triggered by the extension's action icon.
@@ -34,6 +34,6 @@
 - **Advanced UX**: Dynamically disabling the action icon on restricted pages (requires a background script).
 
 ## Current Project Status
-- **Phase**: Initialization.
-- **Completed**: Specification (`01_spec.md`), step-by-step plan (`02_todo.md`), and this context file (`03_additional_context.md`) have been created.
-- **Next Action**: Commit the three markdown files, then proceed with Step 1 from `02_todo.md` (creating `manifest.json` and `popup.html`).
+- **Phase**: Core features implemented.
+- **Completed**: Steps 1–8 from `02_todo.md` (manifest, UI, QR preview, Copy, Save as with dialog, Quick Save to `Downloads/qr-codes/`, error handling for restricted pages). Build pipeline via `esbuild` configured, popup served from `dist`.
+- **Next Action**: Step 9 — add icons (`icons/icon16.png`, `icon48.png`, `icon128.png`) and reference them in `manifest.json`, then commit and tag the initial release.

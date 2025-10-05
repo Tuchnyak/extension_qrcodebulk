@@ -27,6 +27,7 @@ This document outlines the technical specification for a Chrome browser extensio
     - **"Save as..."**:
         - Opens the system's "Save as" dialog.
         - Image size is determined by the value in the **Image Size Input** field.
+        - Implemented via `chrome.downloads.download({ saveAs: true })`.
     - **"Copy to clipboard"**:
         - Copies the QR code image to the system clipboard.
         - Image size is determined by the value in the **Image Size Input** field.
@@ -37,8 +38,8 @@ The extension will use a minimal and efficient architecture consisting only of a
 
 - **`manifest.json`**:
     - Defines the extension's properties, permissions, and entry points.
-    - **Permissions**: Requires the `activeTab` permission to access the URL of the currently active tab when the user interacts with the extension. This is a lightweight permission that does not require invasive warnings upon installation.
-    - **Action**: Defines the `default_popup` as `popup.html` and specifies the extension icons.
+    - **Permissions**: Requires `activeTab` (to read the current tab URL) and `downloads` (for Quick Save and Save as...).
+    - **Action**: Defines the `default_popup` as the built popup HTML served from `dist/`.
 - **Popup Scripts (`popup.html`, `popup.js`, `popup.css`)**:
     - `popup.html`: Contains the structure of the popup UI.
     - `popup.css`: Contains the styles for the popup UI.
@@ -47,6 +48,7 @@ The extension will use a minimal and efficient architecture consisting only of a
         - Handling user interactions (button clicks, checkbox toggles, input changes).
         - Calling the QR code generation library.
         - Implementing the save and copy functionalities.
+    - Build: Source files live under `src/` and are bundled to `dist/` using `esbuild`. The QR library is consumed as an npm dependency (`qrcode`).
 
 A background script is not necessary for this initial version, as no background processing or state management is required.
 

@@ -8,7 +8,7 @@ This document provides a step-by-step implementation plan, broken down into a se
 
 Our first goal is to create a minimal, installable Chrome extension that does nothing but show a placeholder popup. This verifies the basic project structure.
 
-- [ ] **Step 1: Create the Manifest and Popup HTML**
+- [x] **Step 1: Create the Manifest and Popup HTML**
 
 ```text
 Create the foundational files for a Chrome extension.
@@ -34,7 +34,7 @@ Create the foundational files for a Chrome extension.
 
 Now, let's bring the extension to life by implementing the primary function: getting the URL and displaying the QR code.
 
-- [ ] **Step 2: Create the Popup Script and Get the URL**
+- [x] **Step 2: Create the Popup Script and Get the URL**
 
 ```text
 Create the main JavaScript file and link it to the popup. The goal is to verify that we can correctly retrieve the URL of the active tab.
@@ -49,7 +49,8 @@ Create the main JavaScript file and link it to the popup. The goal is to verify 
     - For now, simply log the URL to the console using `console.log(url)`. This allows us to verify this step is working correctly.
 ```
 
-- [ ] **Step 3: Integrate QR Code Generation Library**
+- [x] **Step 3: Integrate QR Code Generation Library**
+  - Implemented using npm package `qrcode` and bundling via `esbuild` into `dist/popup.js` (instead of copying a local `lib/qrcode.min.js`). Functionality equivalent.
 
 ```text
 Download a QR code generation library and use it to display the QR code from the retrieved URL.
@@ -72,7 +73,7 @@ Download a QR code generation library and use it to display the QR code from the
 
 With the core logic working, we'll now build the full user interface as specified.
 
-- [ ] **Step 4: Create the Full HTML Structure and CSS**
+- [x] **Step 4: Create the Full HTML Structure and CSS**
 
 ```text
 Expand the popup's UI to include all the controls from the specification and apply basic styling for a clean layout.
@@ -100,7 +101,7 @@ Expand the popup's UI to include all the controls from the specification and app
 
 The UI is in place. Now, let's make the buttons and controls functional.
 
-- [ ] **Step 5: Implement "Copy to Clipboard"**
+- [x] **Step 5: Implement "Copy to Clipboard"**
 
 ```text
 Wire up the "Copy to clipboard" button. This is a good first action as it's self-contained.
@@ -115,7 +116,8 @@ Wire up the "Copy to clipboard" button. This is a good first action as it's self
     - Briefly change the button text to "Copied!" for user feedback.
 ```
 
-- [ ] **Step 6: Implement "Save as..."**
+- [x] **Step 6: Implement "Save as..."**
+  - Implemented using `chrome.downloads.download({ saveAs: true })` to reliably show the system dialog.
 
 ```text
 Wire up the "Save as..." button. This uses a standard web technique to trigger a download.
@@ -131,7 +133,7 @@ Wire up the "Save as..." button. This uses a standard web technique to trigger a
     - Programmatically click the link to trigger the download dialog, then remove the link from the DOM.
 ```
 
-- [ ] **Step 7: Implement "Quick Save"**
+- [x] **Step 7: Implement "Quick Save"**
 
 ```text
 Wire up the "Quick Save" button using the `chrome.downloads` API.
@@ -153,7 +155,7 @@ Wire up the "Quick Save" button using the `chrome.downloads` API.
 
 This is the final phase of coding, where we tie up loose ends and handle special conditions.
 
-- [ ] **Step 8: Implement Remaining UI Logic and Error Handling**
+- [x] **Step 8: Implement Remaining UI Logic and Error Handling**
 
 ```text
 Finalize the remaining interactive elements and implement the error handling for special pages.
