@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "main": "popup.js",
   "scripts": {
-    "build": "esbuild src/popup.js --bundle --outfile=dist/popup.js && copyfiles -u 1 src/*.html src/*.css dist"
+    "build": "esbuild src/popup.js --bundle --outfile=dist/popup.js && copyfiles -u 1 src/*.html src/*.css dist",
+    "zip": "rm -rf release && mkdir -p release && npm run build && cd dist && zip -r ../release/extension.zip . ../manifest.json ../icons && cd .."
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "description": "",
   "dependencies": {
     "qrcode": "^1.5.4"
