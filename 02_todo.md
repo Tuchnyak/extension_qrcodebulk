@@ -156,6 +156,7 @@ Wire up the "Quick Save" button using the `chrome.downloads` API.
 This is the final phase of coding, where we tie up loose ends and handle special conditions.
 
 - [x] **Step 8: Implement Remaining UI Logic and Error Handling**
+  - Added optional caption of URL under exported QR when "Show URL" is enabled.
 
 ```text
 Finalize the remaining interactive elements and implement the error handling for special pages.
