@@ -7,8 +7,8 @@
 - **Implementation Plan**: See `02_todo.md`.
 
 ## User & Agent Roles
-- **User Profile**: Backend Java developer, new to JavaScript and Chrome extension development.
-- **Agent Role**: Mentor. The agent provides plans, explanations, and code prompts. The user is the "hands" who approves and executes.
+- **User Profile**: The client, who provides requirements, feedback, and approves key decisions.
+- **Agent Role**: The executor/developer. The agent is responsible for proposing professional solutions, implementing the project, and demonstrating progress for approval.
 - **Language**: Russian for communication, English for code and technical terms.
 
 ## Technical Stack & Architecture
