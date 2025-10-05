@@ -1,10 +1,10 @@
 {
   "name": "qrcode",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "popup.js",
   "scripts": {
     "build": "esbuild src/popup.js --bundle --outfile=dist/popup.js && copyfiles -u 1 src/*.html src/*.css dist",
-    "zip": "rm -rf release && mkdir -p release && npm run build && cd dist && zip -r ../release/extension.zip . ../manifest.json ../icons && cd .."
+    "zip": "rm -rf release && mkdir -p release/package/dist && npm run build && cp -r dist/* release/package/dist/ && cp manifest.json release/package/ && mkdir -p release/package/icons && cp -r icons/* release/package/icons/ && cd release/package && zip -r ../extension.zip . && cd ../.."
   },
   "keywords": [],
   "author": "",

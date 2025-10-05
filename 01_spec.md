@@ -82,7 +82,11 @@ A manual testing plan should be executed to ensure quality before release.
 | 9 | **Invalid Size Input**                 | Enter "abc" in the size field and click "Save as...". The dialog opens to save a `512x512` image.              |
 
 ## 7. Future Enhancements (Post-V1)
+-## 8. Packaging & Release
 
+- **Build**: Source under `src/` bundled to `dist/` via `esbuild` (`npm run build`).
+- **Package ZIP**: `npm run zip` creates `release/extension.zip` with `manifest.json`, `dist/`, and `icons/` at the archive root. `manifest.json` references `dist/popup.html`.
+- **Release Branching**: Instead of tags, releases use branches named `release/yyyyMMdd_version`, e.g. `release/20251006_1.0.0`.
 The following features are scoped out for future releases and could be part of a premium/pro version:
 
 - **QR Code Customization**:
