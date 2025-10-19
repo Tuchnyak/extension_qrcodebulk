@@ -1,98 +1,90 @@
-# Developer Specification: QR Code Generator Chrome Extension
+# Developer Specification: Bulk QR Code Generator Chrome Extension
 
 ## 1. Overview
 
-This document outlines the technical specification for a Chrome browser extension that generates a QR code for the current page's URL. The primary goal is to provide a simple, fast, and intuitive user experience.
+This document outlines the technical specification for a Chrome extension that bulk-generates QR codes from user-provided data. The extension operates in a dedicated browser tab, offering a rich user interface for managing input, settings, and generation.
 
 ## 2. Core Functionality & Requirements
 
-### 2.1. Activation and UI
+### 2.1. Activation
 - The extension is activated by clicking its icon in the Chrome toolbar.
-- A popup UI appears directly below the icon.
+- Each click opens the main application in a **new browser tab**. It does not reuse existing tabs.
 
-### 2.2. Popup Interface Components
-1.  **QR Code Image**: The generated QR code is the central element of the popup.
-2.  **URL Display Checkbox**:
-    - A checkbox labeled "Show URL".
-    - Default state: Unchecked.
-    - When checked, a read-only text field with the full URL appears below the QR code.
-    - When checked, any exported image (Copy, Save as..., Quick Save) includes the URL as a caption rendered under the QR code.
-3.  **Image Size Input**:
-    - A number input field allowing the user to specify the side length of the QR code image in pixels.
-    - Default value: `512`.
-4.  **Action Buttons**:
-    - **"Quick Save"**:
-        - Saves the QR code as a PNG image.
-        - Image size is fixed at the default value (`512x512` pixels).
-        - The file is saved directly to the user's `Downloads/qr-codes/` directory without a "Save as" dialog.
-    - **"Save as..."**:
-        - Opens the system's "Save as" dialog.
-        - Image size is determined by the value in the **Image Size Input** field.
-        - Implemented via `chrome.downloads.download({ saveAs: true })`.
-    - **"Copy to clipboard"**:
-        - Copies the QR code image to the system clipboard.
-        - Image size is determined by the value in the **Image Size Input** field.
+### 2.2. Main Page Interface Components
+The UI must be responsive and functional in narrow (mobile-like) views.
+
+1.  **Header**: Displays the extension's name, "Bulk QR Code Generator".
+2.  **Instructions**: A non-editable text block explaining the accepted data formats (one URL per line or CSV).
+3.  **CSV Controls**: A horizontal group of controls for CSV processing:
+    - **Separator Input**: A text input for the CSV separator. Default value: `;`.
+    - **Top Text Checkbox**: A checkbox labeled "Include top text". Enabled only when the separator is detected in the input data.
+    - **Bottom Text Checkbox**: A checkbox labeled "Include bottom text". Enabled only when the separator is detected.
+    - **Upload CSV Button**: A button that opens a file dialog to select a `.csv` or `.txt` file.
+4.  **Data Input Textarea**:
+    - A multi-line textarea for user data.
+    - Fixed height with a scrollbar for overflow.
+    - Placeholder text shows examples:
+        - `https://google.com`
+        - `top_text;https://example.com;bottom_text`
+5.  **Generate Button**: A prominent button to start the QR code generation process.
+6.  **Advanced Settings (Spoiler)**:
+    - A collapsible section labeled "Advanced settings".
+    - **Image Size Input**: A number input for QR code pixel dimensions. Default: `512`.
+    - **File Name Input**: A text input for a custom part of the output filename. Default: `qr_code`.
+        - Validation: Must only contain letters, numbers, hyphens (`-`), and underscores (`_`). No spaces.
+7.  **Status Area**: A designated area to display feedback after generation (e.g., "Saved 95 files. 5 lines had errors. See errors.log for details.").
 
 ## 3. Architecture
 
-The extension will use a minimal and efficient architecture consisting only of a **Manifest V3** and a **Popup Script**.
-
 - **`manifest.json`**:
-    - Defines the extension's properties, permissions, and entry points.
-    - **Permissions**: Requires `activeTab` (to read the current tab URL) and `downloads` (for Quick Save and Save as...).
-    - **Action**: Defines the `default_popup` as the built popup HTML served from `dist/`.
-- **Popup Scripts (`popup.html`, `popup.js`, `popup.css`)**:
-    - `popup.html`: Contains the structure of the popup UI.
-    - `popup.css`: Contains the styles for the popup UI.
-    - `popup.js`: Contains all the client-side logic:
-        - Fetching the URL from the active tab.
-        - Handling user interactions (button clicks, checkbox toggles, input changes).
-        - Calling the QR code generation library.
-        - Implementing the save and copy functionalities.
-    - Build: Source files live under `src/` and are bundled to `dist/` using `esbuild`. The QR library is consumed as an npm dependency (`qrcode`).
-
-A background script is not necessary for this initial version, as no background processing or state management is required.
+    - Manifest V3.
+    - **Permissions**: `downloads`.
+    - **Action**: No `default_popup`. The icon click is handled by the background script.
+    - **Background Script**: A non-persistent script (`background.js`) that listens for `chrome.action.onClicked` and executes `chrome.tabs.create()` to open the main application page (`bulk.html`).
+- **Main Application (`bulk.html`, `bulk.js`, `bulk.css`)**:
+    - `bulk.html`: The structure for the main UI.
+    - `bulk.css`: Styles for a responsive and modern UI.
+    - `bulk.js`: All client-side logic, including UI event handling, data parsing, validation, QR generation, and file saving.
+    - Build: Source files from `src/` are bundled to `dist/` using `esbuild`. The `qrcode` library is an npm dependency.
 
 ## 4. Data Handling & Logic
 
-- **URL Acquisition**: The URL of the active tab will be retrieved using the `chrome.tabs.query({active: true, currentWindow: true})` API call within `popup.js`.
-- **QR Code Generation**: A well-maintained, third-party JavaScript library (e.g., `qrcode`) will be used for generating the QR code data.
-- **User Input Validation**: The value from the **Image Size Input** field should be validated. If the input is not a positive integer, the default value of `512` should be used for the "Save as..." and "Copy" operations.
- - **Caption Rendering**: If "Show URL" is enabled, exports compose a larger canvas: QR of the requested size on top, plus a text caption area below with wrapping and a white background for readability.
+- **Data Parsing**:
+    - The script reads the content of the textarea and splits it into lines. Empty lines are ignored.
+    - For each line, it checks for the presence of the user-defined separator.
+    - **If separator exists**: The line is split into three parts (`top_text`, `URL`, `bottom_text`). If there are not exactly three parts, the line is marked as invalid.
+    - **If no separator**: The entire line is treated as the data to be encoded (e.g., a URL).
+- **CSV Upload**: When a user uploads a file, its content **replaces** any existing content in the textarea.
+- **QR Code Generation**:
+    - The `qrcode` library is used to generate QR codes.
+    - If "Include top/bottom text" checkboxes are checked and the data is available, the final PNG is a composite image: a canvas containing the text, the QR code, and then more text.
+- **File Saving**:
+    - A single timestamp is captured at the moment the "Generate" button is clicked.
+    - A main output directory is created if it doesn't exist: `~/Downloads/001_bulk_qr_codes/`.
+    - A unique sub-directory is created for each generation batch: `~/Downloads/001_bulk_qr_codes/yyyyMMdd_hhmm_customText/`.
+    - Files are named according to the pattern: `yyyyMMdd-hhmm_customText_####.png`.
+    - The number of digits in the file number (`####`) is determined by the total count of valid lines (e.g., 80 lines -> `_01.png`, 120 lines -> `_001.png`).
+    - All downloads are handled via the `chrome.downloads.download()` API.
 
 ## 5. Error Handling
 
-- **Unavailable Pages**: If the extension is activated on a page where the URL is inaccessible (e.g., `chrome://extensions`, `about:blank`, the New Tab Page), the popup should not display the QR code generator UI. Instead, it should show a clear, user-friendly message, such as "QR code cannot be generated for this page."
-- **Invalid Size Input**: As mentioned above, non-numeric or non-positive input in the size field should be handled gracefully by falling back to the default size. The input field could optionally be highlighted with a red border to indicate an error.
+- **Partial Generation**: The process does not stop on error. It generates QR codes for all valid lines and skips invalid ones.
+- **Error Logging**: All skipped lines (due to incorrect CSV format or other issues) are collected.
+- After generation, if there were errors, an `errors.log` file containing all invalid lines is created and saved to the same output sub-directory.
+- The UI displays a summary message indicating the number of successful saves and errors.
+- **UI Feedback**: During generation, the "Generate" button and all other form controls are disabled to prevent changes. The button text changes to "Generating...".
 
 ## 6. Testing Plan
 
-A manual testing plan should be executed to ensure quality before release.
-
-| # | Scenario                               | Expected Outcome                                                                                             |
-|---|----------------------------------------|--------------------------------------------------------------------------------------------------------------|
-| 1 | **Basic Generation**                   | Click icon on a standard webpage (`https://google.com`). A valid QR code is displayed.                         |
-| 2 | **Long URL**                           | Test with a very long URL (e.g., with many query parameters). A more complex but valid QR code is generated.   |
-| 3 | **"Show URL" Checkbox**                | Toggle the checkbox. The URL text should appear and disappear accordingly.                                   |
-| 4 | **"Quick Save" Button**                | Click "Quick Save". A `512x512` PNG file is saved to `Downloads/qr-codes/`.                                    |
-| 5 | **"Save as..." Button**                | Change size to `1024`. Click "Save as...". The "Save as" dialog appears. The saved file is `1024x1024`.        |
-| 6 | **"Copy to clipboard" Button**         | Change size to `256`. Click "Copy". Paste into an image editor. The pasted image is `256x256`.                  |
-| 7 | **Caption When Enabled**               | Enable "Show URL". Use Copy/Save/Quick Save. Exported image contains the URL caption under the QR.             |
-| 8 | **Invalid Page**                       | Open `chrome://extensions` and click the icon. The popup shows the specified error message.                  |
-| 9 | **Invalid Size Input**                 | Enter "abc" in the size field and click "Save as...". The dialog opens to save a `512x512` image.              |
-
-## 7. Future Enhancements (Post-V1)
--## 8. Packaging & Release
-
-- **Build**: Source under `src/` bundled to `dist/` via `esbuild` (`npm run build`).
-- **Package ZIP**: `npm run zip` creates `release/extension.zip` with `manifest.json`, `dist/`, and `icons/` at the archive root. `manifest.json` references `dist/popup.html`.
-- **Release Branching**: Instead of tags, releases use branches named `release/yyyyMMdd_version`, e.g. `release/20251006_1.0.0`.
-The following features are scoped out for future releases and could be part of a premium/pro version:
-
-- **QR Code Customization**:
-    - Add a custom logo/image to the center of the QR code.
-    - Allow changing the color of the QR code.
-- **URL Optimization**:
-    - Option to automatically strip tracking parameters (e.g., UTM, fbclid) from the URL before generation.
-- **UX Improvements**:
-    - Dynamically disable (grey out) the extension icon on pages where it cannot be used.
+| # | Scenario                                       | Expected Outcome                                                                                                                            |
+|---|------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| 1 | **Activation**                                 | Click extension icon. A new tab opens with the bulk generator UI.                                                                           |
+| 2 | **Simple Generation**                          | Paste 10 URLs into the textarea. Click Generate. A new folder is created containing 10 correctly named QR code images (`..._qr_code_01.png` to `..._qr_code_10.png`). |
+| 3 | **CSV Generation**                             | Paste 5 valid CSV lines. Check both "Include" checkboxes. Click Generate. 5 images are created, each with text captions above and below the QR code. |
+| 4 | **Mixed Data & Errors**                        | Paste 5 valid URLs and 3 invalid CSV lines (e.g., 2 or 4 columns). Click Generate. 5 QR codes are saved. An `errors.log` file is created containing the 3 invalid lines. The UI shows a summary. |
+| 5 | **Custom Separator**                           | Change separator to `,`. Paste `top,url,bottom`. Click Generate. The CSV is parsed correctly.                                               |
+| 6 | **Custom Filename**                            | Change "File Name" input to `my-batch`. Click Generate. The output folder and all files include `my-batch` in their names.                  |
+| 7 | **Dynamic Padding**                            | Generate 105 QR codes. The filenames should be padded to 3 digits (e.g., `_001.png`, `_105.png`).                                           |
+| 8 | **CSV Upload**                                 | Have text in the textarea. Click "Upload CSV" and select a file. The textarea content is replaced by the file content.                      |
+| 9 | **UI State During Generation**                 | Click Generate. All inputs and buttons become disabled. The Generate button shows "Generating...". After completion, everything is re-enabled. |
+| 10| **Input Validation**                           | Enter "invalid name" (with a space) in the File Name input. The generation should be blocked or the input sanitized.                        |

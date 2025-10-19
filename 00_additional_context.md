@@ -1,39 +1,33 @@
-# LLM Context: Chrome QR Code Generator Project
+# LLM Context: Chrome Bulk QR Code Generator Project
 
 ## Project Core
-- **Goal**: Create a Chrome extension to generate a QR code for the active tab's URL.
-- **Root Directory**: `/home/tuchnyak/Repos/plugins/chrome-extensions/qrcode`
+- **Goal**: Transform the Chrome extension from a single-URL QR code generator into a powerful bulk generation tool that operates in its own dedicated tab.
+- **Root Directory**: `/home/tuchnyak/Repos/plugins/chrome-extensions/qrcodebulk`
 - **Primary Specification**: See `01_spec.md`.
 - **Implementation Plan**: See `02_todo.md`.
 
 ## User & Agent Roles
-- **User Profile**: The client, who provides requirements, feedback, and approves key decisions.
-- **Agent Role**: The executor/developer. The agent is responsible for proposing professional solutions, implementing the project, and demonstrating progress for approval.
+- **User Profile**: The client and backend developer, who provides requirements, feedback, and approves key decisions.
+- **Agent Role**: The executor and frontend developer. The agent is responsible for proposing professional solutions, implementing the project, and demonstrating progress for approval.
 - **Language**: Russian for communication, English for code and technical terms.
 
 ## Technical Stack & Architecture
 - **Stack**: Plain HTML, CSS, JavaScript. No frameworks.
 - **Manifest**: Version 3.
-- **Architecture**: Simple popup-based. No background script for V1.
-- **Permissions**: `activeTab`, `downloads`.
-- **Dependencies**: npm `qrcode` bundled via `esbuild` into `dist/popup.js`.
+- **Architecture**:
+    - A **background script** listens for the extension icon click.
+    - On click, it opens a **dedicated tab** with the main application (`bulk.html`).
+    - All logic and UI are contained within the `bulk.html` page and its associated JS/CSS files.
+- **Permissions**: `downloads`. The `activeTab` permission is no longer needed.
+- **Dependencies**: npm `qrcode` bundled via `esbuild` into `dist/bulk.js`.
 
-## Key Design Decisions (V1)
-- **UI**: A popup window triggered by the extension's action icon.
-- **Default QR Size**: 512x512 pixels. This is the standard for "Quick Save" and the default value in the size input field.
-- **Features**:
-    - **Quick Save**: Saves a 512x512px PNG directly to `Downloads/qr-codes/` using the `chrome.downloads` API. No user dialog.
-    - **Save as...**: Opens a system dialog to save a PNG of a user-specified size.
-    - **Copy to clipboard**: Copies a user-specified size PNG to the clipboard.
-- **Error Handling**: For restricted pages (`chrome://`, `about:blank`), the popup will display an error message. The simpler implementation was chosen over disabling the icon.
-
-## Deferred Features (Post-V1 / Potential Pro Version)
-- **Customization**: Adding a logo/image to the QR code center.
-- **Styling**: Changing the QR code's color.
-- **URL Processing**: Option to strip UTM and other tracking parameters.
-- **Advanced UX**: Dynamically disabling the action icon on restricted pages (requires a background script).
-
-## Current Project Status
-- **Phase**: Core features implemented.
-- **Completed**: Steps 1–8 from `02_todo.md` (manifest, UI, QR preview, Copy, Save as with dialog, Quick Save to `Downloads/qr-codes/`, error handling for restricted pages). Build pipeline via `esbuild` configured, popup served from `dist`.
-- **Next Action**: Step 9 — add icons (`icons/icon16.png`, `icon48.png`, `icon128.png`) and reference them in `manifest.json`, then commit and tag the initial release.
+## Key Design Decisions (V2 - Bulk Generator)
+- **UI**: A full, responsive web page in a dedicated tab, not a small popup.
+- **Data Input**: A primary textarea for pasting data, supporting both simple URLs (one per line) and CSV data (`top_text;URL;bottom_text`).
+- **CSV Flexibility**: The separator character (`;`) is user-configurable.
+- **File Upload**: A CSV file can be uploaded, replacing the content of the textarea.
+- **Generation Logic**:
+    - **Partial Success**: The tool processes all valid lines and generates QR codes for them.
+    - **Error Handling**: Invalid lines are skipped and logged into an `errors.log` file, which is saved alongside the generated images. A summary message is displayed in the UI.
+- **File Naming**: A precise, timestamped naming convention for both the output folder and the image files (`yyyyMMdd-hhmm_customText_001.png`). Zero-padding for the file number is dynamic based on the total count.
+- **User Experience**: The UI is disabled during the generation process to prevent concurrent modifications, with clear feedback provided to the user.
