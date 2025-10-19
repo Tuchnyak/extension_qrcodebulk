@@ -2,7 +2,7 @@
 
 ## Project Core
 - **Goal**: Transform the Chrome extension from a single-URL QR code generator into a powerful bulk generation tool that operates in its own dedicated tab.
-- **Root Directory**: `/home/tuchnyak/Repos/plugins/chrome-extensions/qrcodebulk`
+- **Root Directory**: `~/Repos/plugins/chrome-extensions/qrcodebulk`
 - **Primary Specification**: See `01_spec.md`.
 - **Implementation Plan**: See `02_todo.md`.
 
