@@ -24,6 +24,10 @@ Goal: Change the extension's core behavior from opening a popup to opening a ded
         4.  Update `src/bulk.html` to be a full-page document and link it to `bulk.css` and `bulk.js`.
         5.  Clean up the content of `bulk.html`, leaving only a basic title and a `<h1>` placeholder.
 
+- [ ] **Verification**:
+    - **Goal**: Confirm the foundational changes are working.
+    - **Action**: Load the unpacked extension in Chrome. Click the extension icon. Verify that a new tab opens with the `bulk.html` page showing the `<h1>` placeholder.
+
 ---
 
 ### Phase 2: Building the User Interface
@@ -44,6 +48,10 @@ Goal: Construct the full static UI for the bulk generator page according to the 
         3.  Ensure the textarea has a fixed height and visible scrollbar on overflow.
         4.  Style the advanced settings spoiler to be functional (though the JS for toggling will come later).
         5.  Add media queries to ensure the layout adapts well to smaller screen widths.
+
+- [ ] **Verification**:
+    - **Goal**: Confirm the static UI is rendered correctly.
+    - **Action**: Reload the extension in Chrome and open the main tab. Verify that all UI elements are present, styled, and responsive. Test resizing the window to check the mobile layout.
 
 ---
 
@@ -79,6 +87,10 @@ Goal: Breathe life into the UI by implementing the data processing and QR genera
         3.  Create `lockUI` and `unlockUI` functions to disable/enable all form controls and update the "Generate" button's text and state.
         4.  Wrap the generation loop with `lockUI()` at the start and `unlockUI()` at the end.
 
+- [ ] **Verification**:
+    - **Goal**: Confirm the core bulk generation logic is working.
+    - **Action**: Reload the extension. Paste a small batch of valid URLs into the textarea. Click "Generate". Verify that the UI locks during the process, the correctly named QR code files are saved to the correct folder, and the UI unlocks upon completion.
+
 ---
 
 ### Phase 4: Finalizing Features and Edge Cases
@@ -110,3 +122,7 @@ Goal: Implement the remaining features like error logging and advanced controls.
         1.  Ensure the placeholder text in the textarea is styled correctly (e.g., light gray).
         2.  Review all UI text for clarity and consistency.
         3.  Perform a final round of manual testing based on the spec's testing plan.
+
+- [ ] **Final Verification**:
+    - **Goal**: Confirm all features are integrated and working correctly.
+    - **Action**: Perform a full end-to-end test. Use mixed valid and invalid data. Test the CSV upload, custom separator, advanced settings, and error log generation. Ensure the final user experience is smooth and robust.
