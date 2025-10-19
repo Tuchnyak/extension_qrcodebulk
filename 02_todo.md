@@ -8,14 +8,14 @@ This document provides a step-by-step implementation plan for refactoring the QR
 
 Goal: Change the extension's core behavior from opening a popup to opening a dedicated tab.
 
-- [ ] **Step 1: Modify Manifest and Create Background Script**
+- [x] **Step 1: Modify Manifest and Create Background Script**
     - **Goal**: Configure the extension to open a new tab when the icon is clicked.
     - **Tasks**:
         1.  Edit `manifest.json`: remove the `action.default_popup` key.
         2.  Add a `background` service worker pointing to `background.js`.
         3.  Create `background.js` to listen for `chrome.action.onClicked` and open `bulk.html` in a new tab.
 
-- [ ] **Step 2: Create the New HTML Page Structure**
+- [x] **Step 2: Create the New HTML Page Structure**
     - **Goal**: Set up the basic HTML file that will serve as the main application page.
     - **Tasks**:
         1.  Rename `src/popup.html` to `src/bulk.html`.
@@ -24,7 +24,7 @@ Goal: Change the extension's core behavior from opening a popup to opening a ded
         4.  Update `src/bulk.html` to be a full-page document and link it to `bulk.css` and `bulk.js`.
         5.  Clean up the content of `bulk.html`, leaving only a basic title and a `<h1>` placeholder.
 
-- [ ] **Verification**:
+- [x] **Verification**:
     - **Goal**: Confirm the foundational changes are working.
     - **Action**: Load the unpacked extension in Chrome. Click the extension icon. Verify that a new tab opens with the `bulk.html` page showing the `<h1>` placeholder.
 
@@ -34,13 +34,13 @@ Goal: Change the extension's core behavior from opening a popup to opening a ded
 
 Goal: Construct the full static UI for the bulk generator page according to the specification.
 
-- [ ] **Step 3: Build the Static HTML Layout**
+- [x] **Step 3: Build the Static HTML Layout**
     - **Goal**: Add all required UI elements to `bulk.html` without any active logic.
     - **Tasks**:
         1.  In `bulk.html`, create the structure for all UI components: header, instructions, CSV controls (input, checkboxes, button), textarea, generate button, and the advanced settings spoiler with its internal inputs.
         2.  Assign clear and consistent IDs to all interactive elements.
 
-- [ ] **Step 4: Apply CSS for a Responsive Layout**
+- [x] **Step 4: Apply CSS for a Responsive Layout**
     - **Goal**: Style the UI to be clean, modern, and responsive.
     - **Tasks**:
         1.  In `bulk.css`, add styles for a centered, max-width main container.
@@ -49,7 +49,7 @@ Goal: Construct the full static UI for the bulk generator page according to the 
         4.  Style the advanced settings spoiler to be functional (though the JS for toggling will come later).
         5.  Add media queries to ensure the layout adapts well to smaller screen widths.
 
-- [ ] **Verification**:
+- [x] **Verification**:
     - **Goal**: Confirm the static UI is rendered correctly.
     - **Action**: Reload the extension in Chrome and open the main tab. Verify that all UI elements are present, styled, and responsive. Test resizing the window to check the mobile layout.
 
@@ -59,7 +59,7 @@ Goal: Construct the full static UI for the bulk generator page according to the 
 
 Goal: Breathe life into the UI by implementing the data processing and QR generation logic.
 
-- [ ] **Step 5: Implement Data Parsing and Validation**
+- [x] **Step 5: Implement Data Parsing and Validation**
     - **Goal**: Write the JavaScript logic to read and interpret the user's input from the textarea.
     - **Tasks**:
         1.  In `bulk.js`, add an event listener to the "Generate" button.
@@ -68,7 +68,7 @@ Goal: Breathe life into the UI by implementing the data processing and QR genera
         4.  The function should return two arrays: `validLines` and `invalidLines`.
         5.  For now, `console.log` the contents of these two arrays.
 
-- [ ] **Step 6: Implement Single QR Code Generation and Download**
+- [x] **Step 6: Implement Single QR Code Generation and Download**
     - **Goal**: Verify that a single QR code can be generated and saved with the correct naming convention.
     - **Tasks**:
         1.  Create a `generateAndDownload` async function that takes a single data object and an index.
@@ -79,7 +79,7 @@ Goal: Breathe life into the UI by implementing the data processing and QR genera
             - Use `chrome.downloads.download()` to save the canvas as a PNG.
         3.  Update the "Generate" button listener to call this function for just the *first* valid line from the parsed data.
 
-- [ ] **Step 7: Implement Full Bulk Processing**
+- [x] **Step 7: Implement Full Bulk Processing**
     - **Goal**: Loop through all valid lines and manage the UI state during generation.
     - **Tasks**:
         1.  Modify the "Generate" button listener to iterate over the entire `validLines` array.
@@ -87,7 +87,7 @@ Goal: Breathe life into the UI by implementing the data processing and QR genera
         3.  Create `lockUI` and `unlockUI` functions to disable/enable all form controls and update the "Generate" button's text and state.
         4.  Wrap the generation loop with `lockUI()` at the start and `unlockUI()` at the end.
 
-- [ ] **Verification**:
+- [x] **Verification**:
     - **Goal**: Confirm the core bulk generation logic is working.
     - **Action**: Reload the extension. Paste a small batch of valid URLs into the textarea. Click "Generate". Verify that the UI locks during the process, the correctly named QR code files are saved to the correct folder, and the UI unlocks upon completion.
 
@@ -97,14 +97,14 @@ Goal: Breathe life into the UI by implementing the data processing and QR genera
 
 Goal: Implement the remaining features like error logging and advanced controls.
 
-- [ ] **Step 8: Implement Error Logging and UI Feedback**
+- [x] **Step 8: Implement Error Logging and UI Feedback**
     - **Goal**: Create the `errors.log` file and display a summary message.
     - **Tasks**:
         1.  If the `invalidLines` array is not empty after parsing, create a string or Blob containing the content of these lines.
         2.  Download this Blob as `errors.log` to the same output sub-directory.
         3.  Implement a function to update the status area on the page with a summary message.
 
-- [ ] **Step 9: Wire Up Advanced Settings and CSV Controls**
+- [x] **Step 9: Wire Up Advanced Settings and CSV Controls**
     - **Goal**: Make all remaining UI controls functional.
     - **Tasks**:
         1.  **Advanced Settings**:
@@ -116,13 +116,13 @@ Goal: Implement the remaining features like error logging and advanced controls.
             - Add logic to enable/disable the "Include text" checkboxes based on the textarea content.
             - Modify the QR generation function to handle rendering text captions on the canvas if the checkboxes are checked.
 
-- [ ] **Step 10: Final Polish**
+- [x] **Step 10: Final Polish**
     - **Goal**: Add final touches for a complete user experience.
     - **Tasks**:
         1.  Ensure the placeholder text in the textarea is styled correctly (e.g., light gray).
         2.  Review all UI text for clarity and consistency.
         3.  Perform a final round of manual testing based on the spec's testing plan.
 
-- [ ] **Final Verification**:
+- [x] **Final Verification**:
     - **Goal**: Confirm all features are integrated and working correctly.
     - **Action**: Perform a full end-to-end test. Use mixed valid and invalid data. Test the CSV upload, custom separator, advanced settings, and error log generation. Ensure the final user experience is smooth and robust.
