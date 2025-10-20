@@ -126,3 +126,62 @@ Goal: Implement the remaining features like error logging and advanced controls.
 - [x] **Final Verification**:
     - **Goal**: Confirm all features are integrated and working correctly.
     - **Action**: Perform a full end-to-end test. Use mixed valid and invalid data. Test the CSV upload, custom separator, advanced settings, and error log generation. Ensure the final user experience is smooth and robust.
+
+---
+
+### Phase 5: UI/UX Improvements Based on Testing Feedback
+
+Goal: Address identified issues and enhance user experience based on real-world testing.
+
+- [ ] **Step 11: Fix CSS Layout Issues**
+    - **Goal**: Resolve visual layout problems identified during testing.
+    - **Tasks**:
+        1. Fix separator input field overlapping with checkbox labels in CSV controls section.
+        2. Ensure proper spacing and alignment for all form elements.
+
+- [ ] **Step 12: Enhance Generate Button with File Count**
+    - **Goal**: Show user how many files will be generated before starting the process.
+    - **Tasks**:
+        1. Add dynamic file count display to the Generate button (e.g., "Generate QR Codes (5 files)").
+        2. Update the count in real-time as user modifies the textarea content.
+        3. Handle edge cases (empty input, invalid lines).
+
+- [ ] **Step 13: Improve Text Rendering on QR Images**
+    - **Goal**: Make text on composite images more readable and properly sized.
+    - **Tasks**:
+        1. Increase font size for text overlays on QR code images.
+        2. Make font size responsive to QR code dimensions (larger QR = larger text).
+        3. Improve text positioning and padding calculations.
+
+- [ ] **Step 14: Add Generation Time Tracking**
+    - **Goal**: Provide user feedback on processing time.
+    - **Tasks**:
+        1. Track start and end time of the generation process.
+        2. Display elapsed time in the completion status message.
+        3. Format time appropriately (seconds for small batches, minutes for large ones).
+
+- [ ] **Step 15: Add File Manager Integration**
+    - **Goal**: Allow users to easily access generated files.
+    - **Tasks**:
+        1. Add a button or link in the completion message to open file manager.
+        2. Use appropriate API to open the Downloads folder or specific subdirectory.
+        3. Handle cross-platform compatibility (Windows, Mac, Linux).
+
+- [ ] **Step 16: Implement ZIP Archive Option**
+    - **Goal**: Provide option to save all QR codes as a single ZIP file.
+    - **Tasks**:
+        1. Add checkbox "Save as ZIP archive" in advanced settings.
+        2. Implement ZIP creation using JavaScript library (e.g., JSZip).
+        3. Modify download logic to create single ZIP file instead of multiple PNG files.
+        4. Update file naming convention for ZIP files.
+
+- [ ] **Step 17: Replace Extension Icons (Final Step)**
+    - **Goal**: Update extension icons to better represent bulk QR generation.
+    - **Tasks**:
+        1. Design or source new icons that reflect bulk/multiple QR code generation.
+        2. Create icons in required sizes (16px, 48px, 128px).
+        3. Update icon files and test display in Chrome toolbar.
+
+- [ ] **Final Testing and Polish**:
+    - **Goal**: Ensure all improvements work together seamlessly.
+    - **Action**: Perform comprehensive testing of all new features. Verify UI improvements, time tracking, file manager integration, and ZIP functionality. Test with various data sizes and formats.
