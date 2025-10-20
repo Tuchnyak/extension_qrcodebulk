@@ -61,9 +61,10 @@ body {
 
 /* CSV Controls */
 .csv-controls {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
     margin-bottom: 25px;
     padding: 20px;
     background-color: #f8f9fa;
@@ -74,13 +75,21 @@ body {
 .control-group {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 5px;
+    min-height: 40px;
 }
 
 .control-group label {
     font-weight: 500;
-    min-width: 120px;
     flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Specific styling for separator input */
+#separator-input {
+    width: 40px;
+    text-align: center;
+    font-weight: bold;
 }
 
 /* Form elements */
@@ -248,18 +257,23 @@ input[type="checkbox"] {
     }
     
     .csv-controls {
-        grid-template-columns: 1fr;
-        gap: 10px;
+        gap: 15px;
     }
     
     .control-group {
         flex-direction: column;
         align-items: flex-start;
-        gap: 5px;
+        gap: 8px;
+        min-height: auto;
     }
     
     .control-group label {
         min-width: auto;
+        margin-bottom: 4px;
+    }
+    
+    #separator-input {
+        width: 60px;
     }
     
     .advanced-content {

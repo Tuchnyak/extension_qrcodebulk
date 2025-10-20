@@ -317,9 +317,9 @@ function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, in
 
     // Draw bottom text
     if (includeBottomText && lineData.bottomText) {
-        ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#000000';
         ctx.font = `${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
-        ctx.textBaseline = 'top';
+    ctx.textBaseline = 'top';
         ctx.textAlign = 'center';
         
         const bottomLines = wrapTextToWidth(ctxMeasure, lineData.bottomText, imageSize - padding * 2);
