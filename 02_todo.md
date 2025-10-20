@@ -139,7 +139,7 @@ Goal: Address identified issues and enhance user experience based on real-world 
         1. Fix separator input field overlapping with checkbox labels in CSV controls section.
         2. Ensure proper spacing and alignment for all form elements.
 
-- [ ] **Step 12: Enhance Generate Button with File Count**
+- [x] **Step 12: Enhance Generate Button with File Count**
     - **Goal**: Show user how many files will be generated before starting the process.
     - **Tasks**:
         1. Add dynamic file count display to the Generate button (e.g., "Generate QR Codes (5 files)").

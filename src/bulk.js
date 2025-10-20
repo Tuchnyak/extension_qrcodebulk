@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeElements();
     wireUpEventListeners();
     updateCSVControls();
+    updateGenerateButtonText();
 });
 
 function initializeElements() {
@@ -37,7 +38,10 @@ function wireUpEventListeners() {
     elements.csvFileInput.addEventListener('change', handleFileUpload);
 
     // Textarea changes - update CSV controls
-    elements.dataTextarea.addEventListener('input', updateCSVControls);
+    elements.dataTextarea.addEventListener('input', () => {
+        updateCSVControls();
+        updateGenerateButtonText();
+    });
 
     // Separator changes - update CSV controls
     elements.separatorInput.addEventListener('input', updateCSVControls);
@@ -57,6 +61,7 @@ function handleFileUpload(event) {
     reader.onload = (e) => {
         elements.dataTextarea.value = e.target.result;
         updateCSVControls();
+        updateGenerateButtonText();
     };
     reader.readAsText(file);
 }
@@ -81,8 +86,21 @@ function updateCSVControls() {
     }
 }
 
+function updateGenerateButtonText() {
+    const lineCount = elements.dataTextarea.value
+        .split('\n')
+        .filter(line => line.trim().length > 0)
+        .length;
+
+    if (lineCount > 0) {
+        elements.generateBtn.textContent = `Generate QR Codes (${lineCount} files)`;
+    } else {
+        elements.generateBtn.textContent = 'Generate QR Codes';
+    }
+}
+
 function validateFileName() {
-    const fileName = elements.fileNameInput.value;
+    const fileName = elements.fileName-input.value;
     const validPattern = /^[a-zA-Z0-9_-]+$/;
     
     if (fileName && !validPattern.test(fileName)) {
@@ -412,7 +430,7 @@ function lockUI() {
 
 function unlockUI() {
     elements.generateBtn.disabled = false;
-    elements.generateBtn.textContent = 'Generate QR Codes';
+    updateGenerateButtonText();
     
     // Re-enable all form controls
     const controls = [
