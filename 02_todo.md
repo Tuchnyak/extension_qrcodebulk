@@ -170,10 +170,14 @@ Goal: Address identified issues and enhance user experience based on real-world 
 - [ ] **Step 16: Implement ZIP Archive Option**
     - **Goal**: Provide option to save all QR codes as a single ZIP file.
     - **Tasks**:
-        1. Add checkbox "Save as ZIP archive" in advanced settings.
-        2. Implement ZIP creation using JavaScript library (e.g., JSZip).
-        3. Modify download logic to create single ZIP file instead of multiple PNG files.
-        4. Update file naming convention for ZIP files.
+        1. Add "Save as ZIP archive" checkbox to `bulk.html`.
+        2. Add `jszip` as an npm dependency.
+        3. Update `esbuild` script to bundle `jszip`.
+        4. In `bulk.js`, modify `handleGenerate` to:
+            - Check the state of the new ZIP checkbox.
+            - If checked, create a ZIP archive in memory during the generation loop.
+            - After the loop, download the single ZIP file.
+        5. Name the ZIP file using the existing timestamped convention.
 
 - [ ] **Step 17: Replace Extension Icons (Final Step)**
     - **Goal**: Update extension icons to better represent bulk QR generation.
