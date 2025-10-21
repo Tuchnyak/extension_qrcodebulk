@@ -146,7 +146,7 @@ Goal: Address identified issues and enhance user experience based on real-world 
         2. Update the count in real-time as user modifies the textarea content.
         3. Handle edge cases (empty input, invalid lines).
 
-- [ ] **Step 13: Improve Text Rendering on QR Images**
+- [x] **Step 13: Improve Text Rendering on QR Images**
     - **Goal**: Make text on composite images more readable and properly sized.
     - **Tasks**:
         1. Increase font size for text overlays on QR code images.

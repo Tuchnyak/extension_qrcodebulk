@@ -2111,6 +2111,7 @@
     initializeElements();
     wireUpEventListeners();
     updateCSVControls();
+    updateGenerateButtonText();
   });
   function initializeElements() {
     elements = {
@@ -2131,7 +2132,10 @@
       elements.csvFileInput.click();
     });
     elements.csvFileInput.addEventListener("change", handleFileUpload);
-    elements.dataTextarea.addEventListener("input", updateCSVControls);
+    elements.dataTextarea.addEventListener("input", () => {
+      updateCSVControls();
+      updateGenerateButtonText();
+    });
     elements.separatorInput.addEventListener("input", updateCSVControls);
     elements.generateBtn.addEventListener("click", handleGenerate);
     elements.fileNameInput.addEventListener("input", validateFileName);
@@ -2143,6 +2147,7 @@
     reader.onload = (e) => {
       elements.dataTextarea.value = e.target.result;
       updateCSVControls();
+      updateGenerateButtonText();
     };
     reader.readAsText(file);
   }
@@ -2159,8 +2164,16 @@
       elements.bottomTextCheckbox.checked = false;
     }
   }
+  function updateGenerateButtonText() {
+    const lineCount = elements.dataTextarea.value.split("\n").filter((line) => line.trim().length > 0).length;
+    if (lineCount > 0) {
+      elements.generateBtn.textContent = `Generate QR Codes (${lineCount} files)`;
+    } else {
+      elements.generateBtn.textContent = "Generate QR Codes";
+    }
+  }
   function validateFileName() {
-    const fileName = elements.fileNameInput.value;
+    const fileName = elements.fileName - input.value;
     const validPattern = /^[a-zA-Z0-9_-]+$/;
     if (fileName && !validPattern.test(fileName)) {
       elements.fileNameInput.setCustomValidity("File name can only contain letters, numbers, hyphens, and underscores");
@@ -2303,8 +2316,9 @@
     });
   }
   function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText) {
+    const FONT_SIZE_RATIO = 0.08;
     const padding = Math.max(8, imageSize * 0.02);
-    const fontSize = Math.max(10, Math.min(18, Math.round(imageSize * 0.035)));
+    const fontSize = Math.max(12, Math.round(imageSize * FONT_SIZE_RATIO));
     const lineHeight = Math.round(fontSize * 1.3);
     const ctxMeasure = document.createElement("canvas").getContext("2d");
     ctxMeasure.font = `${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
@@ -2416,7 +2430,7 @@
   }
   function unlockUI() {
     elements.generateBtn.disabled = false;
-    elements.generateBtn.textContent = "Generate QR Codes";
+    updateGenerateButtonText();
     const controls = [
       elements.separatorInput,
       elements.topTextCheckbox,

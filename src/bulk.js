@@ -284,8 +284,9 @@ async function generateAndDownloadQRCode(lineData, imageSize, includeTopText, in
 }
 
 function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText) {
+    const FONT_SIZE_RATIO = 0.08;
     const padding = Math.max(8, imageSize * 0.02);
-    const fontSize = Math.max(10, Math.min(18, Math.round(imageSize * 0.035)));
+    const fontSize = Math.max(12, Math.round(imageSize * FONT_SIZE_RATIO));
     const lineHeight = Math.round(fontSize * 1.3);
 
     // Calculate text dimensions
