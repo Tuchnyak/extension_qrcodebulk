@@ -153,7 +153,7 @@ Goal: Address identified issues and enhance user experience based on real-world 
         2. Make font size responsive to QR code dimensions (larger QR = larger text).
         3. Improve text positioning and padding calculations.
 
-- [ ] **Step 14: Add Generation Time Tracking**
+- [x] **Step 14: Add Generation Time Tracking**
     - **Goal**: Provide user feedback on processing time.
     - **Tasks**:
         1. Track start and end time of the generation process.

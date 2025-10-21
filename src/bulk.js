@@ -171,6 +171,7 @@ async function handleGenerate() {
 
     isGenerating = true;
     lockUI();
+    const startTime = performance.now(); // Start timer
 
     try {
         const timestamp = new Date();
@@ -221,7 +222,9 @@ async function handleGenerate() {
         }
 
         // Show status message
-        const message = `Generated ${successCount} QR codes successfully.`;
+        const endTime = performance.now(); // End timer
+        const duration = formatDuration(endTime - startTime);
+        const message = `Generated ${successCount} QR codes in ${duration}.`;
         const errorCount = invalidLines.length + errors.length;
         const fullMessage = errorCount > 0 
             ? `${message} ${errorCount} lines had errors. See errors.log for details.`
@@ -407,6 +410,14 @@ function formatTimestamp(date) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     
     return `${year}${month}${day}_${hours}${minutes}`;
+}
+
+function formatDuration(milliseconds) {
+    if (milliseconds < 1000) {
+        return `${Math.round(milliseconds)} ms`;
+    }
+    const seconds = milliseconds / 1000;
+    return `${seconds.toFixed(2)} seconds`;
 }
 
 function lockUI() {
