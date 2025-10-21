@@ -173,6 +173,8 @@ async function handleGenerate() {
     lockUI();
     const startTime = performance.now(); // Start timer
 
+    let lastDownloadId = null;
+
     try {
         const timestamp = new Date();
         const customFileName = elements.fileNameInput.value || 'qr_code';
@@ -198,13 +200,14 @@ async function handleGenerate() {
             const fileName = `${timestampStr}_${customFileName}_${fileNumber}.png`;
 
             try {
-                await generateAndDownloadQRCode(
+                const downloadId = await generateAndDownloadQRCode(
                     lineData,
                     imageSize,
                     includeTopText,
                     includeBottomText,
                     `${subDir}/${fileName}`
                 );
+                lastDownloadId = downloadId; // Store the last successful download ID
                 successCount++;
             } catch (error) {
                 errors.push({
@@ -226,11 +229,13 @@ async function handleGenerate() {
         const duration = formatDuration(endTime - startTime);
         const message = `Generated ${successCount} QR codes in ${duration}.`;
         const errorCount = invalidLines.length + errors.length;
-        const fullMessage = errorCount > 0 
-            ? `${message} ${errorCount} lines had errors. See errors.log for details.`
-            : message;
         
-        showStatus(fullMessage, errorCount > 0 ? 'error' : 'success');
+        let fullMessage = message;
+        if (errorCount > 0) {
+            fullMessage += ` ${errorCount} lines had errors. See errors.log for details.`;
+        }
+
+        showStatus(fullMessage, errorCount > 0 ? 'error' : 'success', lastDownloadId);
 
     } catch (error) {
         console.error('Generation failed:', error);
@@ -275,7 +280,7 @@ async function generateAndDownloadQRCode(lineData, imageSize, includeTopText, in
                         if (chrome.runtime.lastError) {
                             reject(new Error('Download failed: ' + chrome.runtime.lastError.message));
                         } else {
-                            resolve();
+                            resolve(downloadId);
                         }
                     });
                 }, 'image/png');
@@ -463,7 +468,28 @@ function unlockUI() {
     updateCSVControls();
 }
 
-function showStatus(message, type = 'info') {
-    elements.statusArea.textContent = message;
+function showStatus(message, type = 'info', lastDownloadId = null) {
+    // Clear previous content
+    elements.statusArea.innerHTML = '';
     elements.statusArea.className = `status-area ${type}`;
+
+    // Add the main message
+    const messageNode = document.createElement('span');
+    messageNode.textContent = message;
+    elements.statusArea.appendChild(messageNode);
+
+    if (lastDownloadId) {
+        const linkNode = document.createElement('a');
+        linkNode.href = '#';
+        linkNode.textContent = 'Show last file';
+        linkNode.addEventListener('click', (e) => {
+            e.preventDefault();
+            chrome.downloads.show(lastDownloadId);
+        });
+        
+        const actionNode = document.createElement('span');
+        actionNode.style.marginLeft = '8px'; // Add some space
+        actionNode.appendChild(linkNode);
+        elements.statusArea.appendChild(actionNode);
+    }
 }

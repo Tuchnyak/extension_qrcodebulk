@@ -160,7 +160,7 @@ Goal: Address identified issues and enhance user experience based on real-world 
         2. Display elapsed time in the completion status message.
         3. Format time appropriately (seconds for small batches, minutes for large ones).
 
-- [ ] **Step 15: Add File Manager Integration**
+- [x] **Step 15: Add File Manager Integration**
     - **Goal**: Allow users to easily access generated files.
     - **Tasks**:
         1. Add a button or link in the completion message to open file manager.
