@@ -6,6 +6,27 @@ let isGenerating = false;
 
 // DOM elements
 let elements = {};
+let originalGenerateBtnText = '';
+
+// Small helpers to update progress on the Generate button
+function saveOriginalGenerateButtonText() {
+    if (elements.generateBtn) originalGenerateBtnText = elements.generateBtn.textContent;
+}
+
+function updateGenerateButtonProgress(current, total) {
+    if (!elements.generateBtn) return;
+    elements.generateBtn.textContent = `Generating ${current}/${total}`;
+}
+
+function restoreGenerateButtonText() {
+    if (!elements.generateBtn) return;
+    if (originalGenerateBtnText) elements.generateBtn.textContent = originalGenerateBtnText;
+    else updateGenerateButtonText();
+}
+
+function nextTick() {
+    return new Promise(resolve => setTimeout(resolve, 0));
+}
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
@@ -172,6 +193,7 @@ async function handleGenerate() {
     }
 
     isGenerating = true;
+    saveOriginalGenerateButtonText();
     lockUI();
     const startTime = performance.now();
 
@@ -204,6 +226,11 @@ async function handleGenerate() {
                     const blob = await generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText);
                     zip.file(fileName, blob);
                     successCount++;
+                    // update progress and yield briefly to allow UI update on large batches
+                    if (i % 5 === 0) {
+                        updateGenerateButtonProgress(successCount, validLines.length);
+                        await nextTick();
+                    }
                 } catch (error) {
                     errors.push({ line: lineData.originalLine, lineNumber: lineData.lineNumber, reason: error.message });
                 }
@@ -246,6 +273,11 @@ async function handleGenerate() {
                         });
                     });
                     successCount++;
+                    // update progress and yield occasionally
+                    if (i % 5 === 0) {
+                        updateGenerateButtonProgress(successCount, validLines.length);
+                        await nextTick();
+                    }
                 } catch (error) {
                     errors.push({ line: lineData.originalLine, lineNumber: lineData.lineNumber, reason: error.message });
                 }
@@ -276,6 +308,7 @@ async function handleGenerate() {
         showStatus('Generation failed: ' + error.message, 'error');
     } finally {
         isGenerating = false;
+        restoreGenerateButtonText();
         unlockUI();
     }
 }
