@@ -167,7 +167,7 @@ Goal: Address identified issues and enhance user experience based on real-world 
         2. Use appropriate API to open the Downloads folder or specific subdirectory.
         3. Handle cross-platform compatibility (Windows, Mac, Linux).
 
-- [ ] **Step 16: Implement ZIP Archive Option**
+ - [x] **Step 16: Implement ZIP Archive Option**
     - **Goal**: Provide option to save all QR codes as a single ZIP file.
     - **Tasks**:
         1. Add "Save as ZIP archive" checkbox to `bulk.html`.
@@ -178,6 +178,8 @@ Goal: Address identified issues and enhance user experience based on real-world 
             - If checked, create a ZIP archive in memory during the generation loop.
             - After the loop, download the single ZIP file.
         5. Name the ZIP file using the existing timestamped convention.
+
+    - **Status / Notes**: Completed — UI checkbox moved under Generate button; `jszip` was added as a dependency, the build pipeline was updated to include it in the bundle, and the ZIP flow (collect images + errors into a ZIP and download) was tested locally. A simple progress indicator that updates the Generate button during long runs was also implemented and verified.
 
 - [ ] **Step 17: Replace Extension Icons (Final Step)**
     - **Goal**: Update extension icons to better represent bulk QR generation.

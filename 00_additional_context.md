@@ -21,6 +21,10 @@
 - **Permissions**: `downloads`. The `activeTab` permission is no longer needed.
 - **Dependencies**: npm `qrcode` bundled via `esbuild` into `dist/bulk.js`.
 
+Note: `jszip` has been added as a project dependency and integrated into the build; `src/bulk.js` uses it to create an in-memory ZIP containing generated images and the `errors.log` when requested. This flow was tested locally and functions correctly.
+
+Additionally, a simple progress indicator which updates the Generate button text while processing large batches has been implemented and verified to provide responsive feedback during long-running jobs.
+
 ## Key Design Decisions (V2 - Bulk Generator) ✅ IMPLEMENTED
 - **UI**: A full, responsive web page in a dedicated tab, not a small popup. ✅
 - **Data Input**: A primary textarea for pasting data, supporting both simple URLs (one per line) and CSV data (`top_text;URL;bottom_text`). ✅
