@@ -13,7 +13,7 @@
     text-align: center;
     margin-bottom: 30px;
     padding-bottom: 20px;
-    border-bottom: 2px solid #e9ecef;
+    border-bottom: 2px solid #ff0000;
 }
 
 .header h1 {
@@ -29,7 +29,7 @@
     padding: 15px;
     border-radius: 8px;
     margin-bottom: 25px;
-    border-left: 4px solid #007bff;
+    border-left: 4px solid #1F1F1F;
 }
 
 .instructions p {
@@ -249,7 +249,7 @@ input[type="checkbox"] {
 
 /* Upload CSV Button */
 #upload-csv-btn {
-    background-color: #17a2b8;
+    background-color: #1F1F1F;
     color: white;
     border: none;
     padding: 8px 16px;
