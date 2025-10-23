@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Bulk QR Code Generator",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "description": "Welcome to Bulk QR Code Generator - app that helps generate qr codes in bulk saving each QR png file.",
   "background": {
     "service_worker": "dist/background.js"
