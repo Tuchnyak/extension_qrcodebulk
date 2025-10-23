@@ -97,11 +97,11 @@ Goal: Breathe life into the UI by implementing the data processing and QR genera
 
 Goal: Implement the remaining features like error logging and advanced controls.
 
-- [x] **Step 8: Implement Error Logging and UI Feedback**
-    - **Goal**: Create the `errors.log` file and display a summary message.
+ - [x] **Step 8: Implement Error Logging and UI Feedback**
+    - **Goal**: Create the `errors.txt` file and display a summary message.
     - **Tasks**:
         1.  If the `invalidLines` array is not empty after parsing, create a string or Blob containing the content of these lines.
-        2.  Download this Blob as `errors.log` to the same output sub-directory.
+        2.  Download this Blob as `errors.txt` to the same output sub-directory.
         3.  Implement a function to update the status area on the page with a summary message.
 
 - [x] **Step 9: Wire Up Advanced Settings and CSV Controls**
@@ -133,55 +133,61 @@ Goal: Implement the remaining features like error logging and advanced controls.
 
 Goal: Address identified issues and enhance user experience based on real-world testing.
 
-- [ ] **Step 11: Fix CSS Layout Issues**
+- [x] **Step 11: Fix CSS Layout Issues**
     - **Goal**: Resolve visual layout problems identified during testing.
     - **Tasks**:
         1. Fix separator input field overlapping with checkbox labels in CSV controls section.
         2. Ensure proper spacing and alignment for all form elements.
 
-- [ ] **Step 12: Enhance Generate Button with File Count**
+- [x] **Step 12: Enhance Generate Button with File Count**
     - **Goal**: Show user how many files will be generated before starting the process.
     - **Tasks**:
         1. Add dynamic file count display to the Generate button (e.g., "Generate QR Codes (5 files)").
         2. Update the count in real-time as user modifies the textarea content.
         3. Handle edge cases (empty input, invalid lines).
 
-- [ ] **Step 13: Improve Text Rendering on QR Images**
+- [x] **Step 13: Improve Text Rendering on QR Images**
     - **Goal**: Make text on composite images more readable and properly sized.
     - **Tasks**:
         1. Increase font size for text overlays on QR code images.
         2. Make font size responsive to QR code dimensions (larger QR = larger text).
         3. Improve text positioning and padding calculations.
 
-- [ ] **Step 14: Add Generation Time Tracking**
+- [x] **Step 14: Add Generation Time Tracking**
     - **Goal**: Provide user feedback on processing time.
     - **Tasks**:
         1. Track start and end time of the generation process.
         2. Display elapsed time in the completion status message.
         3. Format time appropriately (seconds for small batches, minutes for large ones).
 
-- [ ] **Step 15: Add File Manager Integration**
+- [x] **Step 15: Add File Manager Integration**
     - **Goal**: Allow users to easily access generated files.
     - **Tasks**:
         1. Add a button or link in the completion message to open file manager.
         2. Use appropriate API to open the Downloads folder or specific subdirectory.
         3. Handle cross-platform compatibility (Windows, Mac, Linux).
 
-- [ ] **Step 16: Implement ZIP Archive Option**
+ - [x] **Step 16: Implement ZIP Archive Option**
     - **Goal**: Provide option to save all QR codes as a single ZIP file.
     - **Tasks**:
-        1. Add checkbox "Save as ZIP archive" in advanced settings.
-        2. Implement ZIP creation using JavaScript library (e.g., JSZip).
-        3. Modify download logic to create single ZIP file instead of multiple PNG files.
-        4. Update file naming convention for ZIP files.
+        1. Add "Save as ZIP archive" checkbox to `bulk.html`.
+        2. Add `jszip` as an npm dependency.
+        3. Update `esbuild` script to bundle `jszip`.
+        4. In `bulk.js`, modify `handleGenerate` to:
+            - Check the state of the new ZIP checkbox.
+            - If checked, create a ZIP archive in memory during the generation loop.
+            - After the loop, download the single ZIP file.
+        5. Name the ZIP file using the existing timestamped convention.
 
-- [ ] **Step 17: Replace Extension Icons (Final Step)**
+    - **Status / Notes**: Completed — UI checkbox moved under Generate button; `jszip` was added as a dependency, the build pipeline was updated to include it in the bundle, and the ZIP flow (collect images + errors into a ZIP and download) was tested locally. A simple progress indicator that updates the Generate button during long runs was also implemented and verified.
+
+- [x] **Step 17: Replace Extension Icons (Final Step)**
     - **Goal**: Update extension icons to better represent bulk QR generation.
     - **Tasks**:
         1. Design or source new icons that reflect bulk/multiple QR code generation.
         2. Create icons in required sizes (16px, 48px, 128px).
         3. Update icon files and test display in Chrome toolbar.
 
-- [ ] **Final Testing and Polish**:
-    - **Goal**: Ensure all improvements work together seamlessly.
-    - **Action**: Perform comprehensive testing of all new features. Verify UI improvements, time tracking, file manager integration, and ZIP functionality. Test with various data sizes and formats.
+ - [x] **Final Testing and Polish**: ✅ COMPLETED
+     - **Goal**: Ensure all improvements work together seamlessly.
+     - **Action**: Comprehensive manual testing performed (mixed valid/invalid data, ZIP mode, errors.txt present). Verified UI state and downloads. Marked completed on 2025-10-24.

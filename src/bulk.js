@@ -1,16 +1,39 @@
 import QRCode from 'qrcode';
+import JSZip from 'jszip';
 
 // Global state
 let isGenerating = false;
 
 // DOM elements
 let elements = {};
+let originalGenerateBtnText = '';
+
+// Small helpers to update progress on the Generate button
+function saveOriginalGenerateButtonText() {
+    if (elements.generateBtn) originalGenerateBtnText = elements.generateBtn.textContent;
+}
+
+function updateGenerateButtonProgress(current, total) {
+    if (!elements.generateBtn) return;
+    elements.generateBtn.textContent = `Generating ${current}/${total}`;
+}
+
+function restoreGenerateButtonText() {
+    if (!elements.generateBtn) return;
+    if (originalGenerateBtnText) elements.generateBtn.textContent = originalGenerateBtnText;
+    else updateGenerateButtonText();
+}
+
+function nextTick() {
+    return new Promise(resolve => setTimeout(resolve, 0));
+}
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     initializeElements();
     wireUpEventListeners();
     updateCSVControls();
+    updateGenerateButtonText();
 });
 
 function initializeElements() {
@@ -24,6 +47,7 @@ function initializeElements() {
         generateBtn: document.getElementById('generate-btn'),
         imageSizeInput: document.getElementById('image-size-input'),
         fileNameInput: document.getElementById('file-name-input'),
+        zipCheckbox: document.getElementById('zip-checkbox'),
         statusArea: document.getElementById('status-area')
     };
 }
@@ -37,7 +61,10 @@ function wireUpEventListeners() {
     elements.csvFileInput.addEventListener('change', handleFileUpload);
 
     // Textarea changes - update CSV controls
-    elements.dataTextarea.addEventListener('input', updateCSVControls);
+    elements.dataTextarea.addEventListener('input', () => {
+        updateCSVControls();
+        updateGenerateButtonText();
+    });
 
     // Separator changes - update CSV controls
     elements.separatorInput.addEventListener('input', updateCSVControls);
@@ -57,6 +84,7 @@ function handleFileUpload(event) {
     reader.onload = (e) => {
         elements.dataTextarea.value = e.target.result;
         updateCSVControls();
+        updateGenerateButtonText();
     };
     reader.readAsText(file);
 }
@@ -81,10 +109,25 @@ function updateCSVControls() {
     }
 }
 
+function updateGenerateButtonText() {
+    const lineCount = elements.dataTextarea.value
+        .split('\n')
+        .filter(line => line.trim().length > 0)
+        .length;
+
+    if (lineCount > 0) {
+        elements.generateBtn.textContent = `Generate QR Codes (${lineCount} files)`;
+    } else {
+        elements.generateBtn.textContent = 'Generate QR Codes';
+    }
+}
+
 function validateFileName() {
+    // Use the fileName input value and a safe regex (escape hyphen)
+    if (!elements.fileNameInput) return;
     const fileName = elements.fileNameInput.value;
-    const validPattern = /^[a-zA-Z0-9_-]+$/;
-    
+    const validPattern = /^[A-Za-z0-9_\-]+$/;
+
     if (fileName && !validPattern.test(fileName)) {
         elements.fileNameInput.setCustomValidity('File name can only contain letters, numbers, hyphens, and underscores');
     } else {
@@ -152,7 +195,12 @@ async function handleGenerate() {
     }
 
     isGenerating = true;
+    saveOriginalGenerateButtonText();
     lockUI();
+    const startTime = performance.now();
+
+    let lastDownloadId = null;
+    const isZipEnabled = elements.zipCheckbox.checked;
 
     try {
         const timestamp = new Date();
@@ -161,38 +209,93 @@ async function handleGenerate() {
         const includeTopText = elements.topTextCheckbox.checked;
         const includeBottomText = elements.bottomTextCheckbox.checked;
 
-        // Create directory structure
-        const baseDir = '001_bulk_qr_codes';
         const timestampStr = formatTimestamp(timestamp);
-        const subDir = `${baseDir}/${timestampStr}_${customFileName}`;
+        const baseName = `${timestampStr}_${customFileName}`;
+        const subDir = `001_bulk_qr_codes/${baseName}`;
 
-        // Calculate padding for file numbers
         const padding = Math.max(2, Math.ceil(Math.log10(validLines.length + 1)));
-
         let successCount = 0;
         const errors = [];
 
-        // Process each valid line
-        for (let i = 0; i < validLines.length; i++) {
-            const lineData = validLines[i];
-            const fileNumber = String(i + 1).padStart(padding, '0');
-            const fileName = `${timestampStr}_${customFileName}_${fileNumber}.png`;
+        if (isZipEnabled) {
+            // ZIP Archive Logic
+            const zip = new JSZip();
+            for (let i = 0; i < validLines.length; i++) {
+                const lineData = validLines[i];
+                const fileNumber = String(i + 1).padStart(padding, '0');
+                const fileName = `${baseName}_${fileNumber}.png`;
+                try {
+                    const blob = await generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText);
+                    zip.file(fileName, blob);
+                    successCount++;
+                    // update progress and yield briefly to allow UI update on large batches
+                    if (i % 5 === 0) {
+                        updateGenerateButtonProgress(successCount, validLines.length);
+                        await nextTick();
+                    }
+                } catch (error) {
+                    errors.push({ line: lineData.originalLine, lineNumber: lineData.lineNumber, reason: error.message });
+                }
+            }
 
-            try {
-                await generateAndDownloadQRCode(
-                    lineData,
-                    imageSize,
-                    includeTopText,
-                    includeBottomText,
-                    `${subDir}/${fileName}`
-                );
-                successCount++;
-            } catch (error) {
-                errors.push({
-                    line: lineData.originalLine,
-                    lineNumber: lineData.lineNumber,
-                    reason: error.message
+            // Merge parsing invalidLines into errors array so they are included in the ZIP
+            if (invalidLines.length > 0) {
+                invalidLines.forEach(il => errors.push({ line: il.line || il, lineNumber: il.lineNumber || '?', reason: il.reason || 'Invalid format' }));
+            }
+
+            // If there are errors, add errors.txt into the ZIP so the archive contains diagnostic info
+            if (errors.length > 0) {
+                const errorContent = errors.map(err => `Line ${err.lineNumber}: ${err.line} - ${err.reason}`).join('\n');
+                zip.file('errors.txt', errorContent);
+            }
+
+            // Download ZIP if there are any files or at least an errors.txt to provide feedback
+            if (successCount > 0 || errors.length > 0) {
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const zipUrl = URL.createObjectURL(zipBlob);
+                lastDownloadId = await new Promise((resolve, reject) => {
+                    chrome.downloads.download({
+                        url: zipUrl,
+                        filename: `${subDir}.zip`,
+                        saveAs: false
+                    }, (id) => {
+                        // Delay revoke to ensure Chrome had time to start the download
+                        setTimeout(() => URL.revokeObjectURL(zipUrl), 2000);
+                        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+                        else resolve(id);
+                    });
                 });
+            }
+
+        } else {
+            // Individual File Logic
+            for (let i = 0; i < validLines.length; i++) {
+                const lineData = validLines[i];
+                const fileNumber = String(i + 1).padStart(padding, '0');
+                const fileName = `${baseName}_${fileNumber}.png`;
+                try {
+                    const blob = await generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText);
+                    const url = URL.createObjectURL(blob);
+                    lastDownloadId = await new Promise((resolve, reject) => {
+                        chrome.downloads.download({
+                            url: url,
+                            filename: `${subDir}/${fileName}`,
+                            saveAs: false
+                        }, (id) => {
+                            URL.revokeObjectURL(url);
+                            if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+                            else resolve(id);
+                        });
+                    });
+                    successCount++;
+                    // update progress and yield occasionally
+                    if (i % 5 === 0) {
+                        updateGenerateButtonProgress(successCount, validLines.length);
+                        await nextTick();
+                    }
+                } catch (error) {
+                    errors.push({ line: lineData.originalLine, lineNumber: lineData.lineNumber, reason: error.message });
+                }
             }
         }
 
@@ -203,24 +306,29 @@ async function handleGenerate() {
         }
 
         // Show status message
-        const message = `Generated ${successCount} QR codes successfully.`;
+        const endTime = performance.now();
+        const duration = formatDuration(endTime - startTime);
+        const message = `Generated ${successCount} QR codes in ${duration}.`;
         const errorCount = invalidLines.length + errors.length;
-        const fullMessage = errorCount > 0 
-            ? `${message} ${errorCount} lines had errors. See errors.log for details.`
-            : message;
         
-        showStatus(fullMessage, errorCount > 0 ? 'error' : 'success');
+        let fullMessage = message;
+        if (errorCount > 0) {
+            fullMessage += ' There are some problems. See errors.txt for details.';
+        }
+
+        showStatus(fullMessage, errorCount > 0 ? 'error' : 'success', lastDownloadId);
 
     } catch (error) {
         console.error('Generation failed:', error);
         showStatus('Generation failed: ' + error.message, 'error');
     } finally {
         isGenerating = false;
+        restoreGenerateButtonText();
         unlockUI();
     }
 }
 
-async function generateAndDownloadQRCode(lineData, imageSize, includeTopText, includeBottomText, filePath) {
+async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText) {
     return new Promise((resolve, reject) => {
         // Generate QR code
         QRCode.toCanvas(lineData.url, { width: imageSize }, (error, qrCanvas) => {
@@ -237,26 +345,13 @@ async function generateAndDownloadQRCode(lineData, imageSize, includeTopText, in
                     finalCanvas = createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText);
                 }
 
-                // Convert to blob and download
+                // Convert to blob
                 finalCanvas.toBlob((blob) => {
                     if (!blob) {
                         reject(new Error('Failed to create image blob'));
-                        return;
+                    } else {
+                        resolve(blob);
                     }
-
-                    const url = URL.createObjectURL(blob);
-                    chrome.downloads.download({
-                        url: url,
-                        filename: filePath,
-                        saveAs: false
-                    }, (downloadId) => {
-                        URL.revokeObjectURL(url);
-                        if (chrome.runtime.lastError) {
-                            reject(new Error('Download failed: ' + chrome.runtime.lastError.message));
-                        } else {
-                            resolve();
-                        }
-                    });
                 }, 'image/png');
             } catch (error) {
                 reject(error);
@@ -266,8 +361,9 @@ async function generateAndDownloadQRCode(lineData, imageSize, includeTopText, in
 }
 
 function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText) {
+    const FONT_SIZE_RATIO = 0.08;
     const padding = Math.max(8, imageSize * 0.02);
-    const fontSize = Math.max(10, Math.min(18, Math.round(imageSize * 0.035)));
+    const fontSize = Math.max(12, Math.round(imageSize * FONT_SIZE_RATIO));
     const lineHeight = Math.round(fontSize * 1.3);
 
     // Calculate text dimensions
@@ -317,9 +413,9 @@ function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, in
 
     // Draw bottom text
     if (includeBottomText && lineData.bottomText) {
-        ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#000000';
         ctx.font = `${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
-        ctx.textBaseline = 'top';
+    ctx.textBaseline = 'top';
         ctx.textAlign = 'center';
         
         const bottomLines = wrapTextToWidth(ctxMeasure, lineData.bottomText, imageSize - padding * 2);
@@ -367,7 +463,7 @@ async function createErrorLog(errors, subDir) {
     return new Promise((resolve, reject) => {
         chrome.downloads.download({
             url: url,
-            filename: `${subDir}/errors.log`,
+            filename: `${subDir}/errors.txt`,
             saveAs: false
         }, (downloadId) => {
             URL.revokeObjectURL(url);
@@ -388,6 +484,14 @@ function formatTimestamp(date) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     
     return `${year}${month}${day}_${hours}${minutes}`;
+}
+
+function formatDuration(milliseconds) {
+    if (milliseconds < 1000) {
+        return `${Math.round(milliseconds)} ms`;
+    }
+    const seconds = milliseconds / 1000;
+    return `${seconds.toFixed(2)} seconds`;
 }
 
 function lockUI() {
@@ -412,7 +516,7 @@ function lockUI() {
 
 function unlockUI() {
     elements.generateBtn.disabled = false;
-    elements.generateBtn.textContent = 'Generate QR Codes';
+    updateGenerateButtonText();
     
     // Re-enable all form controls
     const controls = [
@@ -433,7 +537,28 @@ function unlockUI() {
     updateCSVControls();
 }
 
-function showStatus(message, type = 'info') {
-    elements.statusArea.textContent = message;
+function showStatus(message, type = 'info', lastDownloadId = null) {
+    // Clear previous content
+    elements.statusArea.innerHTML = '';
     elements.statusArea.className = `status-area ${type}`;
+
+    // Add the main message
+    const messageNode = document.createElement('span');
+    messageNode.textContent = message;
+    elements.statusArea.appendChild(messageNode);
+
+    if (lastDownloadId) {
+        const linkNode = document.createElement('a');
+        linkNode.href = '#';
+        linkNode.textContent = 'Show last file';
+        linkNode.addEventListener('click', (e) => {
+            e.preventDefault();
+            chrome.downloads.show(lastDownloadId);
+        });
+        
+        const actionNode = document.createElement('span');
+        actionNode.style.marginLeft = '8px'; // Add some space
+        actionNode.appendChild(linkNode);
+        elements.statusArea.appendChild(actionNode);
+    }
 }

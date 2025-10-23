@@ -10,6 +10,7 @@
     <div class="container">
         <!-- Header -->
         <header class="header">
+            <img src="../icons/icon48.png" alt="Extension icon" class="ext-icon">
             <h1>Bulk QR Code Generator</h1>
         </header>
 
@@ -22,21 +23,25 @@
 
         <!-- CSV Controls -->
         <div class="csv-controls">
-            <div class="control-group">
-                <label for="separator-input">Separator:</label>
-                <input type="text" id="separator-input" value=";" maxlength="1">
+            <div class="csv-options-left">
+                <div class="control-group">
+                    <label for="separator-input">Separator:</label>
+                    <input type="text" id="separator-input" value=";" maxlength="1">
+                </div>
+                <div class="control-group">
+                    <label for="top-text-checkbox">Include top text</label>
+                    <input type="checkbox" id="top-text-checkbox" disabled>
+                </div>
+                <div class="control-group">
+                    <label for="bottom-text-checkbox">Include bottom text</label>
+                    <input type="checkbox" id="bottom-text-checkbox" disabled>
+                </div>
             </div>
-            <div class="control-group">
-                <label for="top-text-checkbox">Include top text</label>
-                <input type="checkbox" id="top-text-checkbox" disabled>
-            </div>
-            <div class="control-group">
-                <label for="bottom-text-checkbox">Include bottom text</label>
-                <input type="checkbox" id="bottom-text-checkbox" disabled>
-            </div>
-            <div class="control-group">
-                <button id="upload-csv-btn">Upload CSV</button>
-                <input type="file" id="csv-file-input" accept=".csv,.txt" style="display: none;">
+            <div class="csv-options-right">
+                <div class="control-group">
+                    <button id="upload-csv-btn">Upload CSV</button>
+                    <input type="file" id="csv-file-input" accept=".csv,.txt" style="display: none;">
+                </div>
             </div>
         </div>
 
@@ -50,6 +55,14 @@
             <button id="generate-btn">Generate QR Codes</button>
         </div>
 
+        <!-- ZIP option (moved from Advanced settings) -->
+        <div class="zip-option">
+            <div class="control-group">
+                <input type="checkbox" id="zip-checkbox">
+                <label for="zip-checkbox">Save as ZIP archive</label>
+            </div>
+        </div>
+
         <!-- Advanced Settings -->
         <details class="advanced-settings">
             <summary>Advanced settings</summary>
@@ -58,10 +71,10 @@
                     <label for="image-size-input">Image Size (px):</label>
                     <input type="number" id="image-size-input" value="512" min="100" max="2048">
                 </div>
-                <div class="control-group">
-                    <label for="file-name-input">File Name:</label>
-                    <input type="text" id="file-name-input" value="qr_code" pattern="[a-zA-Z0-9_-]+">
-                </div>
+                            <div class="control-group">
+                                <label for="file-name-input">File Name:</label>
+                                <input type="text" id="file-name-input" value="qr_code" pattern="[a-zA-Z0-9_-]+">
+                            </div>
             </div>
         </details>
 
