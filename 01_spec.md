@@ -32,7 +32,7 @@ The UI must be responsive and functional in narrow (mobile-like) views.
     - **Image Size Input**: A number input for QR code pixel dimensions. Default: `512`.
     - **File Name Input**: A text input for a custom part of the output filename. Default: `qr_code`.
         - Validation: Must only contain letters, numbers, hyphens (`-`), and underscores (`_`). No spaces.
-7.  **Status Area**: A designated area to display feedback after generation (e.g., "Saved 95 files. 5 lines had errors. See errors.log for details.").
+7.  **Status Area**: A designated area to display feedback after generation (e.g., "Saved 95 files. 5 lines had errors. See errors.txt for details.").
 
 ## 3. Architecture
 
@@ -70,7 +70,7 @@ The UI must be responsive and functional in narrow (mobile-like) views.
 
 - **Partial Generation**: The process does not stop on error. It generates QR codes for all valid lines and skips invalid ones.
 - **Error Logging**: All skipped lines (due to incorrect CSV format or other issues) are collected.
-- After generation, if there were errors, an `errors.log` file containing all invalid lines is created and saved to the same output sub-directory.
+- After generation, if there were errors, an `errors.txt` file containing all invalid lines is created and saved to the same output sub-directory.
 - The UI displays a summary message indicating the number of successful saves and errors.
 - **UI Feedback**: During generation, the "Generate" button and all other form controls are disabled to prevent changes. The button text changes to "Generating...".
 
@@ -81,7 +81,7 @@ The UI must be responsive and functional in narrow (mobile-like) views.
 | 1 | **Activation**                                 | Click extension icon. A new tab opens with the bulk generator UI.                                                                           |
 | 2 | **Simple Generation**                          | Paste 10 URLs into the textarea. Click Generate. A new folder is created containing 10 correctly named QR code images (`..._qr_code_01.png` to `..._qr_code_10.png`). |
 | 3 | **CSV Generation**                             | Paste 5 valid CSV lines. Check both "Include" checkboxes. Click Generate. 5 images are created, each with text captions above and below the QR code. |
-| 4 | **Mixed Data & Errors**                        | Paste 5 valid URLs and 3 invalid CSV lines (e.g., 2 or 4 columns). Click Generate. 5 QR codes are saved. An `errors.log` file is created containing the 3 invalid lines. The UI shows a summary. |
+| 4 | **Mixed Data & Errors**                        | Paste 5 valid URLs and 3 invalid CSV lines (e.g., 2 or 4 columns). Click Generate. 5 QR codes are saved. An `errors.txt` file is created containing the 3 invalid lines. The UI shows a summary. |
 | 5 | **Custom Separator**                           | Change separator to `,`. Paste `top,url,bottom`. Click Generate. The CSV is parsed correctly.                                               |
 | 6 | **Custom Filename**                            | Change "File Name" input to `my-batch`. Click Generate. The output folder and all files include `my-batch` in their names.                  |
 | 7 | **Dynamic Padding**                            | Generate 105 QR codes. The filenames should be padded to 3 digits (e.g., `_001.png`, `_105.png`).                                           |

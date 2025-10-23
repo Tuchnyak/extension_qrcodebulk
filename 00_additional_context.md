@@ -21,7 +21,7 @@
 - **Permissions**: `downloads`. The `activeTab` permission is no longer needed.
 - **Dependencies**: npm `qrcode` bundled via `esbuild` into `dist/bulk.js`.
 
-Note: `jszip` has been added as a project dependency and integrated into the build; `src/bulk.js` uses it to create an in-memory ZIP containing generated images and the `errors.log` when requested. This flow was tested locally and functions correctly.
+Note: `jszip` has been added as a project dependency and integrated into the build; `src/bulk.js` uses it to create an in-memory ZIP containing generated images and the `errors.txt` when requested. This flow was tested locally and functions correctly.
 
 Additionally, a simple progress indicator which updates the Generate button text while processing large batches has been implemented and verified to provide responsive feedback during long-running jobs.
 
@@ -32,7 +32,7 @@ Additionally, a simple progress indicator which updates the Generate button text
 - **File Upload**: A CSV file can be uploaded, replacing the content of the textarea. ✅
 - **Generation Logic**:
     - **Partial Success**: The tool processes all valid lines and generates QR codes for them. ✅
-    - **Error Handling**: Invalid lines are skipped and logged into an `errors.log` file, which is saved alongside the generated images. A summary message is displayed in the UI. ✅
+    - **Error Handling**: Invalid lines are skipped and logged into an `errors.txt` file, which is saved alongside the generated images. A summary message is displayed in the UI. ✅
 - **File Naming**: A precise, timestamped naming convention for both the output folder and the image files (`yyyyMMdd-hhmm_customText_001.png`). Zero-padding for the file number is dynamic based on the total count. ✅
 - **User Experience**: The UI is disabled during the generation process to prevent concurrent modifications, with clear feedback provided to the user. ✅
 
@@ -52,3 +52,19 @@ The extension is fully functional and ready for testing. All features from the s
 - File upload functionality
 - Advanced settings (image size, custom filename)
 - Responsive design for mobile/desktop
+
+## Technical debt / Future optimization: multithreading
+
+The bulk QR generation work is currently implemented on the main thread. For very large batches (thousands of images) this can become CPU-bound and cause long total run times or UI responsiveness issues. Below are low-risk to higher-effort options to improve throughput and responsiveness:
+
+- Web Workers: Move QR generation and canvas compositing into Web Workers. Pros: keeps UI thread responsive; easy to scale concurrency by spawning multiple workers. Cons: OffscreenCanvas support varies across browsers; transferring ImageBitmap/ArrayBuffer adds serialization overhead.
+
+- OffscreenCanvas: Use OffscreenCanvas inside workers to draw and export images without blocking the main thread. Pros: avoids DOM/canvas on main thread and can be faster. Cons: not universally available in all environments; increased complexity.
+
+- Worker Pool & Bounded Concurrency: Implement a small pool (based on navigator.hardwareConcurrency) to process tasks concurrently with backpressure. Pros: relatively low complexity; good control over CPU/memory usage. Cons: still affected by single-threaded JS limitations per worker.
+
+- Streaming ZIP / Incremental Writes: Instead of building a full in-memory ZIP (which can be memory-heavy for many files), stream entries to disk or use a streaming zip library that writes in chunks. Pros: lower memory footprint; better for very large archives. Cons: more complex, may require different APIs or bundling.
+
+- Server-side Bundling: Offload generation/zip creation to a server if privacy/scale tradeoffs permit. Pros: scalable and can use native tooling for speed. Cons: requires network transfer and has privacy/security implications.
+
+Recommendation (next steps): start with a Worker Pool + OffscreenCanvas where supported. That provides the best balance of responsiveness and throughput for the client-side use-case. Track this work as a discrete, testable follow-up (not required for the immediate release focused on correct error logging in ZIPs).

@@ -123,9 +123,11 @@ function updateGenerateButtonText() {
 }
 
 function validateFileName() {
-    const fileName = elements.fileName-input.value;
-    const validPattern = /^[a-zA-Z0-9_-]+$/;
-    
+    // Use the fileName input value and a safe regex (escape hyphen)
+    if (!elements.fileNameInput) return;
+    const fileName = elements.fileNameInput.value;
+    const validPattern = /^[A-Za-z0-9_\-]+$/;
+
     if (fileName && !validPattern.test(fileName)) {
         elements.fileNameInput.setCustomValidity('File name can only contain letters, numbers, hyphens, and underscores');
     } else {
@@ -236,7 +238,19 @@ async function handleGenerate() {
                 }
             }
 
-            if (successCount > 0) {
+            // Merge parsing invalidLines into errors array so they are included in the ZIP
+            if (invalidLines.length > 0) {
+                invalidLines.forEach(il => errors.push({ line: il.line || il, lineNumber: il.lineNumber || '?', reason: il.reason || 'Invalid format' }));
+            }
+
+            // If there are errors, add errors.txt into the ZIP so the archive contains diagnostic info
+            if (errors.length > 0) {
+                const errorContent = errors.map(err => `Line ${err.lineNumber}: ${err.line} - ${err.reason}`).join('\n');
+                zip.file('errors.txt', errorContent);
+            }
+
+            // Download ZIP if there are any files or at least an errors.txt to provide feedback
+            if (successCount > 0 || errors.length > 0) {
                 const zipBlob = await zip.generateAsync({ type: 'blob' });
                 const zipUrl = URL.createObjectURL(zipBlob);
                 lastDownloadId = await new Promise((resolve, reject) => {
@@ -245,7 +259,8 @@ async function handleGenerate() {
                         filename: `${subDir}.zip`,
                         saveAs: false
                     }, (id) => {
-                        URL.revokeObjectURL(zipUrl);
+                        // Delay revoke to ensure Chrome had time to start the download
+                        setTimeout(() => URL.revokeObjectURL(zipUrl), 2000);
                         if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
                         else resolve(id);
                     });
@@ -298,7 +313,7 @@ async function handleGenerate() {
         
         let fullMessage = message;
         if (errorCount > 0) {
-            fullMessage += ` ${errorCount} lines had errors. See errors.log for details.`;
+            fullMessage += ' There are some problems. See errors.txt for details.';
         }
 
         showStatus(fullMessage, errorCount > 0 ? 'error' : 'success', lastDownloadId);
@@ -448,7 +463,7 @@ async function createErrorLog(errors, subDir) {
     return new Promise((resolve, reject) => {
         chrome.downloads.download({
             url: url,
-            filename: `${subDir}/errors.log`,
+            filename: `${subDir}/errors.txt`,
             saveAs: false
         }, (downloadId) => {
             URL.revokeObjectURL(url);
