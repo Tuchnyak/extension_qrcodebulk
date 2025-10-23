@@ -10,10 +10,14 @@
 
 /* Header */
 .header {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* centers the h1 by default */
+    gap: 12px;
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 2px solid #ff0000;
+    position: relative;
 }
 
 .header h1 {
@@ -21,6 +25,15 @@
     font-size: 28px;
     font-weight: 600;
     color: #2c3e50;
+    text-align: center;
+    flex: 1 1 auto;
+}
+
+.header .ext-icon {
+    position: absolute;
+    left: 0;
+    width: 48px;
+    height: 48px;
 }
 
 /* Instructions */
