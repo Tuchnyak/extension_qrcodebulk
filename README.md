@@ -2,8 +2,7 @@
 
 A powerful Chrome extension for bulk-generating QR codes from URLs or CSV data. The extension operates in a dedicated browser tab, offering a rich user interface for managing input, settings, and generation.
 
-![Screenshot of Bulk QR Code Generator](https://user-images.githubusercontent.com/12345/placeholder.png)  
-*(Note: A real screenshot should be added here)*
+![Screenshot of Bulk QR Code Generator](screenshot.png)  
 
 ## Features
 
