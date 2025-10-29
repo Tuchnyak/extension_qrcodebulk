@@ -211,7 +211,7 @@ Goal: Implement changes based on the first round of user testing to improve usab
         2.  In `bulk.html`, remove the `<details>` spoiler for "Advanced settings" so the options are always visible. Keep the heading.
         3.  In `bulk.css`, increase the font size for the status message text.
 
-- [ ] **Step 20: Overhaul CSV Controls**
+- [x] **Step 20: Overhaul CSV Controls**
     - **Goal**: Make the CSV-related controls more intuitive and dynamic.
     - **Tasks**:
         1.  In `bulk.html`, rearrange the CSV controls: place the "Upload CSV" button first, followed by the separator input and then the two checkboxes.

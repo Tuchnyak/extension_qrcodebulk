@@ -87,6 +87,9 @@ function handleFileUpload(event) {
         updateGenerateButtonText();
     };
     reader.readAsText(file);
+
+    // Reset the file input value to allow re-uploading the same file
+    event.target.value = null;
 }
 
 function updateCSVControls() {
@@ -95,18 +98,18 @@ function updateCSVControls() {
     
     // Check if any line contains the separator
     const hasCSVData = textareaContent.split('\n').some(line => 
-        line.trim() && line.includes(separator)
+        line.trim() && separator && line.includes(separator)
     );
 
-    // Enable/disable checkboxes based on CSV data presence
-    elements.topTextCheckbox.disabled = !hasCSVData;
-    elements.bottomTextCheckbox.disabled = !hasCSVData;
+    // Show/hide CSV-specific options
+    const csvOptions = document.querySelectorAll('.csv-options');
+    csvOptions.forEach(el => {
+        el.style.display = hasCSVData ? '' : 'none';
+    });
 
-    // Uncheck if disabled
-    if (!hasCSVData) {
-        elements.topTextCheckbox.checked = false;
-        elements.bottomTextCheckbox.checked = false;
-    }
+    // The logic to disable/enable checkboxes is no longer needed,
+    // as the controls are hidden entirely.
+    // We also don't need to uncheck them, as they are checked by default.
 }
 
 function updateGenerateButtonText() {
@@ -299,8 +302,8 @@ async function handleGenerate() {
             }
         }
 
-        // Create error log if there are errors
-        if (invalidLines.length > 0 || errors.length > 0) {
+        // Create error log if there are errors and ZIP is not used
+        if (!isZipEnabled && (invalidLines.length > 0 || errors.length > 0)) {
             const allErrors = [...invalidLines, ...errors];
             await createErrorLog(allErrors, subDir);
         }
