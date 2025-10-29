@@ -16,23 +16,26 @@ The UI must be responsive and functional in narrow (mobile-like) views.
 1.  **Header**: Displays the extension's name, "Bulk QR Code Generator".
 2.  **Instructions**: A non-editable text block explaining the accepted data formats (one URL per line or CSV).
 3.  **CSV Controls**: A horizontal group of controls for CSV processing:
-    - **Separator Input**: A text input for the CSV separator. Default value: `;`.
-    - **Top Text Checkbox**: A checkbox labeled "Include top text". Enabled only when the separator is detected in the input data.
-    - **Bottom Text Checkbox**: A checkbox labeled "Include bottom text". Enabled only when the separator is detected.
     - **Upload CSV Button**: A button that opens a file dialog to select a `.csv` or `.txt` file.
+    - **Separator Input**: A text input for the CSV separator. Default value: `;`.
+    - **Top Text Checkbox**: A checkbox labeled "Include top text". Checked by default.
+    - **Bottom Text Checkbox**: A checkbox labeled "Include bottom text". Checked by default.
+    - *Behavior*: The separator input and checkboxes are only visible if the content of the Data Input Textarea contains the separator character.
 4.  **Data Input Textarea**:
     - A multi-line textarea for user data.
     - Fixed height with a scrollbar for overflow.
     - Placeholder text shows examples:
         - `https://google.com`
         - `top_text;https://example.com;bottom_text`
-5.  **Generate Button**: A prominent button to start the QR code generation process.
-6.  **Advanced Settings (Spoiler)**:
-    - A collapsible section labeled "Advanced settings".
-    - **Image Size Input**: A number input for QR code pixel dimensions. Default: `512`.
+5.  **Status Area**: A designated area to display feedback after generation (e.g., "Saved 95 files. 5 lines had errors. See errors.txt for details."). Positioned between the data textarea and the generate button.
+6.  **Generate Button & Controls**: A horizontal group containing:
+    - A prominent button to start the QR code generation process.
+    - A checkbox labeled "Save as ZIP archive" aligned to the right of the button.
+7.  **Advanced Settings**:
+    - A heading labeled "Advanced settings". The section is always visible.
+    - **Image Size Input**: A number input for QR code pixel dimensions with a datalist of common sizes (256, 512, 1024). Default: `512`.
     - **File Name Input**: A text input for a custom part of the output filename. Default: `qr_code`.
         - Validation: Must only contain letters, numbers, hyphens (`-`), and underscores (`_`). No spaces.
-7.  **Status Area**: A designated area to display feedback after generation (e.g., "Saved 95 files. 5 lines had errors. See errors.txt for details.").
 
 ## 3. Architecture
 
@@ -52,8 +55,8 @@ The UI must be responsive and functional in narrow (mobile-like) views.
 - **Data Parsing**:
     - The script reads the content of the textarea and splits it into lines. Empty lines are ignored.
     - For each line, it checks for the presence of the user-defined separator.
-    - **If separator exists**: The line is split into three parts (`top_text`, `URL`, `bottom_text`). If there are not exactly three parts, the line is marked as invalid.
-    - **If no separator**: The entire line is treated as the data to be encoded (e.g., a URL).
+    - **If separator exists**: The line is split into three parts (`top_text`, `URL`, `bottom_text`). Each part is trimmed to remove leading/trailing whitespace. If there are not exactly three parts after splitting, the line is marked as invalid.
+    - **If no separator**: The entire line is treated as the data to be encoded (e.g., a URL). This allows for mixed data types in a single batch.
 - **CSV Upload**: When a user uploads a file, its content **replaces** any existing content in the textarea.
 - **QR Code Generation**:
     - The `qrcode` library is used to generate QR codes.

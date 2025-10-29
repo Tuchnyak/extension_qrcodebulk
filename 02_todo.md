@@ -167,7 +167,7 @@ Goal: Address identified issues and enhance user experience based on real-world 
         2. Use appropriate API to open the Downloads folder or specific subdirectory.
         3. Handle cross-platform compatibility (Windows, Mac, Linux).
 
- - [x] **Step 16: Implement ZIP Archive Option**
+- [x] **Step 16: Implement ZIP Archive Option**
     - **Goal**: Provide option to save all QR codes as a single ZIP file.
     - **Tasks**:
         1. Add "Save as ZIP archive" checkbox to `bulk.html`.
@@ -191,3 +191,46 @@ Goal: Address identified issues and enhance user experience based on real-world 
  - [x] **Final Testing and Polish**: ✅ COMPLETED
      - **Goal**: Ensure all improvements work together seamlessly.
      - **Action**: Comprehensive manual testing performed (mixed valid/invalid data, ZIP mode, errors.txt present). Verified UI state and downloads. Marked completed on 2025-10-24.
+
+---
+
+### Phase 6: UI/UX Refinements from First Feedback
+
+Goal: Implement changes based on the first round of user testing to improve usability and clarity.
+
+- [x] **Step 18: Refine Data Parsing Logic**
+    - **Goal**: Make data parsing more robust and flexible.
+    - **Tasks**:
+        1.  In `bulk.js`, modify the parsing function to `trim()` whitespace from each part of a line after splitting it by the separator.
+        2.  Update the generation logic to check each line individually for the CSV format, allowing mixed content (URL-only lines and full CSV lines) in the same batch.
+
+- [x] **Step 19: Rearrange Main UI Layout**
+    - **Goal**: Improve the logical flow of the UI based on user feedback.
+    - **Tasks**:
+        1.  In `bulk.html`, move the status/results message block to be between the main textarea and the generate button.
+        2.  In `bulk.html`, remove the `<details>` spoiler for "Advanced settings" so the options are always visible. Keep the heading.
+        3.  In `bulk.css`, increase the font size for the status message text.
+
+- [ ] **Step 20: Overhaul CSV Controls**
+    - **Goal**: Make the CSV-related controls more intuitive and dynamic.
+    - **Tasks**:
+        1.  In `bulk.html`, rearrange the CSV controls: place the "Upload CSV" button first, followed by the separator input and then the two checkboxes.
+        2.  In `bulk.css`, ensure all these controls are left-aligned in a clean row.
+        3.  In `bulk.js`, set the "Include top text" and "Include bottom text" checkboxes to be checked by default on page load.
+        4.  In `bulk.js`, implement a function that runs on textarea input. This function will check if any line contains the separator. If not, it will hide the separator input and the two checkboxes, leaving only the "Upload CSV" button visible.
+
+- [ ] **Step 21: Improve Generation Controls**
+    - **Goal**: Enhance the input elements for generation settings.
+    - **Tasks**:
+        1.  In `bulk.html`, change the "Image Size" input. Use an `<input>` with a `<datalist>` to provide a dropdown of common sizes (e.g., 256, 512, 1024) while still allowing custom numeric input.
+        2.  In `bulk.html` and `bulk.css`, move the "Save as ZIP" checkbox to be on the same line as the "Generate" button, aligned to the right.
+        3.  In `bulk.css`, add a style to make the label for the "Save as ZIP" checkbox red (`#ff0000`).
+
+- [ ] **Verification**:
+    - **Goal**: Confirm all feedback-driven changes are implemented correctly.
+    - **Action**:
+        1.  Test parsing with leading/trailing spaces in CSV data.
+        2.  Test with a mix of URL-only lines and CSV lines.
+        3.  Verify the new UI layout: status block position, CSV controls order, always-visible advanced settings, and ZIP checkbox position/color.
+        4.  Verify the dynamic behavior of CSV controls (hiding/showing based on textarea content).
+        5.  Test the new image size dropdown and ensure manual input still works.

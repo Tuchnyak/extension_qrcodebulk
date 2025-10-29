@@ -153,12 +153,12 @@ function parseData() {
     lines.forEach((line, index) => {
         if (line.includes(separator)) {
             // CSV format: top_text;URL;bottom_text
-            const parts = line.split(separator);
+            const parts = line.split(separator).map(part => part.trim());
             if (parts.length === 3) {
                 validLines.push({
-                    topText: parts[0].trim(),
-                    url: parts[1].trim(),
-                    bottomText: parts[2].trim(),
+                    topText: parts[0],
+                    url: parts[1],
+                    bottomText: parts[2],
                     originalLine: line,
                     lineNumber: index + 1
                 });
