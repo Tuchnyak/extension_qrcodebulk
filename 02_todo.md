@@ -223,8 +223,9 @@ Goal: Implement changes based on the first round of user testing to improve usab
     - **Goal**: Enhance the input elements for generation settings.
     - **Tasks**:
         1.  In `bulk.html`, change the "Image Size" input. Use an `<input>` with a `<datalist>` to provide a dropdown of common sizes (e.g., 256, 512, 1024) while still allowing custom numeric input.
-        2.  In `bulk.html` and `bulk.css`, move the "Save as ZIP" checkbox to be on the same line as the "Generate" button, aligned to the right.
-        3.  In `bulk.css`, add a style to make the label for the "Save as ZIP" checkbox red (`#ff0000`).
+        2.  In `bulk.html` and `bulk.css`, move the "Save as ZIP" checkbox to be on the same line as the "Generate" button, aligned to the right. (DONE)
+        3.  In `bulk.css`, add a style to make the label for the "Save as ZIP" checkbox red underline (`#ff0000`). (DONE)
+
 
 - [ ] **Verification**:
     - **Goal**: Confirm all feedback-driven changes are implemented correctly.

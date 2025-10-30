@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bulk QR Code Generator</title>
     <link rel="stylesheet" href="bulk.css">
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -18,7 +20,8 @@
         <div class="instructions">
             <p>Enter URLs or CSV data (one per line):</p>
             <p><strong>Simple URLs:</strong> <code>https://google.com</code></p>
-            <p><strong>CSV format:</strong> <code>top_text;URL;bottom_text</code></p>
+            <p><strong>CSV format:</strong> <code>top_text<span class="separator-highlight">;</span>URL<span
+                        class="separator-highlight">;</span>bottom_text</code></p>
         </div>
 
         <!-- CSV Controls -->
@@ -43,7 +46,9 @@
 
         <!-- Data Input -->
         <div class="data-input">
-            <textarea id="data-textarea" placeholder="https://google.com&#10;https://example.com&#10;top_text;https://example.com;bottom_text" rows="8"></textarea>
+            <textarea id="data-textarea"
+                placeholder="https://google.com&#10;https://example.com&#10;top_text;https://example.com;bottom_text"
+                rows="8"></textarea>
         </div>
 
         <!-- Status Area -->
@@ -52,13 +57,9 @@
         <!-- Generate Button -->
         <div class="generate-section">
             <button id="generate-btn">Generate QR Codes</button>
-        </div>
-
-        <!-- ZIP option (moved from Advanced settings) -->
-        <div class="zip-option">
-            <div class="control-group">
+            <div class="control-group zip-option">
                 <input type="checkbox" id="zip-checkbox">
-                <label for="zip-checkbox">Save as ZIP archive</label>
+                <label for="zip-checkbox">As ZIP archive</label>
             </div>
         </div>
 
@@ -67,7 +68,15 @@
             <h3>Advanced settings:</h3>
             <div class="control-group">
                 <label for="image-size-input">Image Size (px):</label>
-                <input type="number" id="image-size-input" value="512" min="100" max="2048">
+                <select id="image-size-input">
+                    <option value="64">64</option>
+                    <option value="128">128</option>
+                    <option value="256">256</option>
+                    <option value="512" selected>512</option>
+                    <option value="1024">1024</option>
+                    <option value="2048">2048</option>
+                    <option value="4096">4096</option>
+                </select>
             </div>
             <div class="control-group">
                 <label for="file-name-input">File Name:</label>
@@ -78,4 +87,5 @@
 
     <script src="bulk.js" defer></script>
 </body>
+
 </html>
