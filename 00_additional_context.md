@@ -55,6 +55,8 @@ The extension is fully functional and ready for testing. All features from the s
 
 ## Technical debt / Future optimization: multithreading
 
+- Filename Customization: Add a checkbox in advanced settings to append the first N characters of the URL to the filename after the custom part. This would require a new input for 'N' (number of characters).
+
 The bulk QR generation work is currently implemented on the main thread. For very large batches (thousands of images) this can become CPU-bound and cause long total run times or UI responsiveness issues. Below are low-risk to higher-effort options to improve throughput and responsiveness:
 
 - Web Workers: Move QR generation and canvas compositing into Web Workers. Pros: keeps UI thread responsive; easy to scale concurrency by spawning multiple workers. Cons: OffscreenCanvas support varies across browsers; transferring ImageBitmap/ArrayBuffer adds serialization overhead.
