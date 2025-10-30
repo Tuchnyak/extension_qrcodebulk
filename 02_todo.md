@@ -219,7 +219,7 @@ Goal: Implement changes based on the first round of user testing to improve usab
         3.  In `bulk.js`, set the "Include top text" and "Include bottom text" checkboxes to be checked by default on page load.
         4.  In `bulk.js`, implement a function that runs on textarea input. This function will check if any line contains the separator. If not, it will hide the separator input and the two checkboxes, leaving only the "Upload CSV" button visible.
 
-- [ ] **Step 21: Improve Generation Controls**
+- [x] **Step 21: Improve Generation Controls**
     - **Goal**: Enhance the input elements for generation settings.
     - **Tasks**:
         1.  In `bulk.html`, change the "Image Size" input. Use a `<select>` element to provide a dropdown of common sizes (e.g., 64, 128, 256, 512, 1024, 2048, 4096). (DONE)
