@@ -222,12 +222,11 @@ Goal: Implement changes based on the first round of user testing to improve usab
 - [ ] **Step 21: Improve Generation Controls**
     - **Goal**: Enhance the input elements for generation settings.
     - **Tasks**:
-        1.  In `bulk.html`, change the "Image Size" input. Use an `<input>` with a `<datalist>` to provide a dropdown of common sizes (e.g., 256, 512, 1024) while still allowing custom numeric input.
+        1.  In `bulk.html`, change the "Image Size" input. Use a `<select>` element to provide a dropdown of common sizes (e.g., 64, 128, 256, 512, 1024, 2048, 4096). (DONE)
         2.  In `bulk.html` and `bulk.css`, move the "Save as ZIP" checkbox to be on the same line as the "Generate" button, aligned to the right. (DONE)
         3.  In `bulk.css`, add a style to make the label for the "Save as ZIP" checkbox red underline (`#ff0000`). (DONE)
 
-
-- [ ] **Verification**:
+- [x] **Verification**:
     - **Goal**: Confirm all feedback-driven changes are implemented correctly.
     - **Action**:
         1.  Test parsing with leading/trailing spaces in CSV data.
@@ -235,3 +234,5 @@ Goal: Implement changes based on the first round of user testing to improve usab
         3.  Verify the new UI layout: status block position, CSV controls order, always-visible advanced settings, and ZIP checkbox position/color.
         4.  Verify the dynamic behavior of CSV controls (hiding/showing based on textarea content).
         5.  Test the new image size dropdown and ensure manual input still works.
+
+- [x] **Step 21: Improve Generation Controls**: ✅ COMPLETED

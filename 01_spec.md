@@ -33,7 +33,7 @@ The UI must be responsive and functional in narrow (mobile-like) views.
     - A checkbox labeled "Save as ZIP archive" aligned to the right of the button.
 7.  **Advanced Settings**:
     - A heading labeled "Advanced settings". The section is always visible.
-    - **Image Size Input**: A number input for QR code pixel dimensions with a datalist of common sizes (256, 512, 1024). Default: `512`.
+    - **Image Size Input**: A select dropdown for QR code pixel dimensions with predefined options (64, 128, 256, 512, 1024, 2048, 4096). Default: `512`.
     - **File Name Input**: A text input for a custom part of the output filename. Default: `qr_code`.
         - Validation: Must only contain letters, numbers, hyphens (`-`), and underscores (`_`). No spaces.
 
