@@ -236,3 +236,24 @@ Goal: Implement changes based on the first round of user testing to improve usab
         5.  Test the new image size dropdown and ensure manual input still works.
 
 - [x] **Step 21: Improve Generation Controls**: ✅ COMPLETED
+
+---
+
+### Phase 7: Post-Installation Welcome Page
+
+Goal: Create a user-friendly welcome page to guide users on how to pin and use the extension.
+
+- [x] **Step 22: Create Welcome Page Structure**
+    - **Goal**: Set up the necessary HTML files and redirects for the welcome page.
+    - **Tasks**:
+        1.  Create `docs/welcome.html` with a basic structure.
+        2.  Create `docs/index.html` to automatically redirect to `welcome.html`.
+        3.  Create `docs/assets/` directory for images.
+
+- [x] **Step 23: Design and Style the Welcome Page**
+    - **Goal**: Implement the visual design and content for the welcome page.
+    - **Tasks**:
+        1.  Add instructional text and screenshots (`wp-1.png`, `wp-2.png`).
+        2.  Apply minimalist, centered styling directly within the HTML.
+        3.  Refine typography, spacing, and image sizes based on feedback.
+        4.  Ensure key actions are highlighted with a thin red underline for clarity.
