@@ -58,5 +58,16 @@
         </p>
         <img src="assets/wp-2.png" alt="Step 2: Open the extension">
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        });
+    </script>
 </body>
 </html>
