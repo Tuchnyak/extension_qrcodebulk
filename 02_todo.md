@@ -257,3 +257,31 @@ Goal: Create a user-friendly welcome page to guide users on how to pin and use t
         2.  Apply minimalist, centered styling directly within the HTML.
         3.  Refine typography, spacing, and image sizes based on feedback.
         4.  Ensure key actions are highlighted with a thin red underline for clarity.
+
+- [x] **Step 24: Integrate `onInstalled` Listener for Welcome Page**
+    - **Goal**: Ensure the welcome page opens automatically on first extension installation.
+    - **Tasks**:
+        1.  In `src/background.js`, add the `chrome.runtime.onInstalled` listener.
+        2.  Inside the `INSTALL` reason block, use `chrome.tabs.create` to open `https://tuchnyak.github.io/extension_qrcodebulk/welcome.html`.
+    - **Code Snippet**:
+        ```javascript
+        chrome.runtime.onInstalled.addListener((details) => {
+          if (details.reason === chrome.runtime.OnInstalledReason.INSTALL) {
+            // Code to be executed on first install
+            // eg. open a tab with a url
+            chrome.tabs.create({
+              url: "https://tuchnyak.github.io/extension_qrcodebulk/welcome.html",
+            });
+          } else if (details.reason === chrome.runtime.OnInstalledReason.UPDATE) {
+            // When extension is updated
+          } else if (
+            details.reason === chrome.runtime.OnInstalledReason.CHROME_UPDATE
+          ) {
+            // When browser is updated
+          } else if (
+            details.reason === chrome.runtime.OnInstalledReason.SHARED_MODULE_UPDATE
+          ) {
+            // When a shared module is updated
+          }
+        });
+        ```
