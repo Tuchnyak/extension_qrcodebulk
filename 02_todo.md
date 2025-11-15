@@ -285,3 +285,36 @@ Goal: Create a user-friendly welcome page to guide users on how to pin and use t
           }
         });
         ```
+
+---
+
+### Phase 8: UI Enhancements (Separator and Rating)
+
+Goal: Implement UI improvements based on new requirements.
+
+- [x] **Step 25: Refine CSV Controls Visibility**
+    - **Goal**: Adjust the logic to make the separator input always visible, while the 'Include text' checkboxes remain dynamic.
+    - **Tasks**:
+        1.  In `src/bulk.js`, modify the `updateCSVControls` function.
+        2.  The logic now correctly shows the separator input at all times.
+        3.  The "Include top/bottom text" checkboxes are shown only when the separator character is detected in the textarea.
+
+- [x] **Step 26: Implement Rating Banner**
+    - **Goal**: Add a persistent, interactive rating banner at the bottom of the page.
+    - **Tasks**:
+        1.  **HTML**: Added the banner structure to `bulk.html`.
+        2.  **CSS**: Styled the banner as a light, rounded-corner box fixed to the bottom-center of the viewport.
+        3.  **JavaScript**: Implemented event listeners for hover effects and click actions on the stars, redirecting users to the CWS or a feedback form.
+
+---
+
+### Phase 9: Bug Fixes and Final Polish
+
+Goal: Address critical bugs found during testing.
+
+- [x] **Step 27: Resolve Critical Bugs**
+    - **Goal**: Fix issues related to event handling and DOM manipulation.
+    - **Tasks**:
+        1.  **Fixed Double File Picker**: In `src/bulk.js`, removed a duplicate `DOMContentLoaded` event listener that caused event handlers to be registered twice.
+        2.  **Fixed `appendChild` Error**: In `src/bulk.js`, corrected a typo in the `showStatus` function where a node was being appended to itself.
+        3.  **Fixed Syntax Error**: Added a missing closing brace `}` to the `showStatus` function to resolve an "Unexpected end of file" error.

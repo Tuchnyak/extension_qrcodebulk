@@ -28,13 +28,7 @@ function nextTick() {
     return new Promise(resolve => setTimeout(resolve, 0));
 }
 
-// Initialize the application
-document.addEventListener('DOMContentLoaded', () => {
-    initializeElements();
-    wireUpEventListeners();
-    updateCSVControls();
-    updateGenerateButtonText();
-});
+
 
 function initializeElements() {
     elements = {
@@ -101,15 +95,20 @@ function updateCSVControls() {
         line.trim() && separator && line.includes(separator)
     );
 
-    // Show/hide CSV-specific options
-    const csvOptions = document.querySelectorAll('.csv-options');
-    csvOptions.forEach(el => {
-        el.style.display = hasCSVData ? '' : 'none';
-    });
+    // Get the parent control groups for the checkboxes
+    const topTextControlGroup = elements.topTextCheckbox.closest('.control-group');
+    const bottomTextControlGroup = elements.bottomTextCheckbox.closest('.control-group');
 
-    // The logic to disable/enable checkboxes is no longer needed,
-    // as the controls are hidden entirely.
-    // We also don't need to uncheck them, as they are checked by default.
+    // Apply display logic only to the checkbox control groups
+    if (topTextControlGroup) {
+        topTextControlGroup.style.display = hasCSVData ? '' : 'none';
+    }
+    if (bottomTextControlGroup) {
+        bottomTextControlGroup.style.display = hasCSVData ? '' : 'none';
+    }
+
+    // The separator input's control group is intentionally not modified here,
+    // ensuring it remains always visible.
 }
 
 function updateGenerateButtonText() {
@@ -565,3 +564,65 @@ function showStatus(message, type = 'info', lastDownloadId = null) {
         elements.statusArea.appendChild(actionNode);
     }
 }
+
+// Rating Banner Logic
+const CHROME_WEB_STORE_URL = "https://chromewebstore.google.com/detail/bulk-qr-code-generator/nkpcheohehognkoamimhhjpgclhhleap?hl=en";
+const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdfg_.../viewform"; // Placeholder for Google Form URL
+
+function setupRatingBanner() {
+    const ratingStarsContainer = document.getElementById('rating-stars');
+    if (!ratingStarsContainer) return;
+
+    const stars = ratingStarsContainer.querySelectorAll('.star');
+
+    stars.forEach(star => {
+        star.addEventListener('mouseover', () => {
+            const value = parseInt(star.dataset.value);
+            highlightStars(value);
+        });
+
+        star.addEventListener('mouseout', () => {
+            resetStars();
+        });
+
+        star.addEventListener('click', () => {
+            const value = parseInt(star.dataset.value);
+            handleStarClick(value);
+        });
+    });
+}
+
+function highlightStars(value) {
+    const stars = document.querySelectorAll('.rating-banner .star');
+    stars.forEach(star => {
+        if (parseInt(star.dataset.value) <= value) {
+            star.classList.add('hover');
+        } else {
+            star.classList.remove('hover');
+        }
+    });
+}
+
+function resetStars() {
+    const stars = document.querySelectorAll('.rating-banner .star');
+    stars.forEach(star => {
+        star.classList.remove('hover');
+    });
+}
+
+function handleStarClick(value) {
+    if (value >= 4) {
+        chrome.tabs.create({ url: CHROME_WEB_STORE_URL });
+    } else {
+        chrome.tabs.create({ url: GOOGLE_FORM_URL });
+    }
+}
+
+// Add setupRatingBanner to DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    initializeElements();
+    wireUpEventListeners();
+    updateCSVControls();
+    updateGenerateButtonText();
+    setupRatingBanner(); // Call the new function here
+});
