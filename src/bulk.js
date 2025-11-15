@@ -567,7 +567,7 @@ function showStatus(message, type = 'info', lastDownloadId = null) {
 
 // Rating Banner Logic
 const CHROME_WEB_STORE_URL = "https://chromewebstore.google.com/detail/bulk-qr-code-generator/nkpcheohehognkoamimhhjpgclhhleap?hl=en";
-const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdfg_.../viewform"; // Placeholder for Google Form URL
+const GOOGLE_FORM_URL = "https://forms.gle/43rRgL9snFnLXKFe8";
 
 function setupRatingBanner() {
     const ratingStarsContainer = document.getElementById('rating-stars');
