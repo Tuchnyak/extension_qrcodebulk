@@ -569,11 +569,21 @@ function showStatus(message, type = 'info', lastDownloadId = null) {
 const CHROME_WEB_STORE_URL = "https://chromewebstore.google.com/detail/bulk-qr-code-generator/nkpcheohehognkoamimhhjpgclhhleap?hl=en";
 const GOOGLE_FORM_URL = "https://forms.gle/43rRgL9snFnLXKFe8";
 
+let lastRatingValue = 0; // Global variable to store the last selected rating
+
 function setupRatingBanner() {
     const ratingStarsContainer = document.getElementById('rating-stars');
     if (!ratingStarsContainer) return;
 
     const stars = ratingStarsContainer.querySelectorAll('.star');
+
+    // Load last rating from storage
+    chrome.storage.local.get(['lastRatingValue'], (result) => {
+        if (result.lastRatingValue) {
+            lastRatingValue = result.lastRatingValue;
+            applySelectedStars(lastRatingValue);
+        }
+    });
 
     stars.forEach(star => {
         star.addEventListener('mouseover', () => {
@@ -587,6 +597,9 @@ function setupRatingBanner() {
 
         star.addEventListener('click', () => {
             const value = parseInt(star.dataset.value);
+            lastRatingValue = value; // Update global state
+            chrome.storage.local.set({ lastRatingValue: value }); // Save to storage
+            applySelectedStars(value); // Apply selected state
             handleStarClick(value);
         });
     });
@@ -607,6 +620,21 @@ function resetStars() {
     const stars = document.querySelectorAll('.rating-banner .star');
     stars.forEach(star => {
         star.classList.remove('hover');
+    });
+    // If a rating was previously selected, re-apply it
+    if (lastRatingValue > 0) {
+        applySelectedStars(lastRatingValue);
+    }
+}
+
+function applySelectedStars(value) {
+    const stars = document.querySelectorAll('.rating-banner .star');
+    stars.forEach(star => {
+        if (parseInt(star.dataset.value) <= value) {
+            star.classList.add('selected');
+        } else {
+            star.classList.remove('selected');
+        }
     });
 }
 

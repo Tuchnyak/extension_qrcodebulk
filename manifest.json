@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": "__MSG_appName__",
   "description": "__MSG_shortDesc__",
   "default_locale": "en",
@@ -20,6 +20,7 @@
     "128": "icons/icon128.png"
   },
   "permissions": [
-    "downloads"
+    "downloads",
+    "storage"
   ]
 }
