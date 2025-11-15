@@ -566,7 +566,68 @@ function showStatus(message, type = 'info', lastDownloadId = null) {
         
         const actionNode = document.createElement('span');
         actionNode.style.marginLeft = '8px'; // Add some space
-        actionNode.appendChild(linkNode);
-        elements.statusArea.appendChild(actionNode);
+        actionNode.appendChild(actionNode);
     }
 }
+
+// Rating Banner Logic
+const CHROME_WEB_STORE_URL = "https://chromewebstore.google.com/detail/bulk-qr-code-generator/nkpcheohehognkoamimhhjpgclhhleap?hl=en";
+const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdfg_.../viewform"; // Placeholder for Google Form URL
+
+function setupRatingBanner() {
+    const ratingStarsContainer = document.getElementById('rating-stars');
+    if (!ratingStarsContainer) return;
+
+    const stars = ratingStarsContainer.querySelectorAll('.star');
+
+    stars.forEach(star => {
+        star.addEventListener('mouseover', () => {
+            const value = parseInt(star.dataset.value);
+            highlightStars(value);
+        });
+
+        star.addEventListener('mouseout', () => {
+            resetStars();
+        });
+
+        star.addEventListener('click', () => {
+            const value = parseInt(star.dataset.value);
+            handleStarClick(value);
+        });
+    });
+}
+
+function highlightStars(value) {
+    const stars = document.querySelectorAll('.rating-banner .star');
+    stars.forEach(star => {
+        if (parseInt(star.dataset.value) <= value) {
+            star.classList.add('hover');
+        } else {
+            star.classList.remove('hover');
+        }
+    });
+}
+
+function resetStars() {
+    const stars = document.querySelectorAll('.rating-banner .star');
+    stars.forEach(star => {
+        star.classList.remove('hover');
+    });
+}
+
+function handleStarClick(value) {
+    if (value >= 4) {
+        chrome.tabs.create({ url: CHROME_WEB_STORE_URL });
+    } else {
+        chrome.tabs.create({ url: GOOGLE_FORM_URL });
+    }
+}
+
+// Add setupRatingBanner to DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    initializeElements();
+    wireUpEventListeners();
+    updateCSVControls();
+    updateGenerateButtonText();
+    setupRatingBanner(); // Call the new function here
+});

@@ -340,3 +340,42 @@ input[type="checkbox"] {
         padding: 12px;
     }
 }
+
+/* Rating Banner */
+.rating-banner {
+    position: fixed;
+    bottom: 20px; /* Отступ от низа */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 280px; /* Уменьшенная ширина */
+    background-color: #e0e0e0; /* Чуть темнее фон */
+    color: #555; /* Темный текст */
+    padding: 10px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 10px; /* Скругленные углы */
+    z-index: 1000;
+}
+
+.rating-banner span {
+    font-size: 1.25em; /* Увеличенный размер текста */
+}
+
+.rating-banner .stars {
+    display: flex;
+}
+
+.rating-banner .star {
+    font-size: 24px;
+    color: #888; /* Grey stars */
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.rating-banner .star.hover,
+.rating-banner .star.selected {
+    color: #ffc107; /* Yellow stars */
+}
