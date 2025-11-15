@@ -28,13 +28,7 @@ function nextTick() {
     return new Promise(resolve => setTimeout(resolve, 0));
 }
 
-// Initialize the application
-document.addEventListener('DOMContentLoaded', () => {
-    initializeElements();
-    wireUpEventListeners();
-    updateCSVControls();
-    updateGenerateButtonText();
-});
+
 
 function initializeElements() {
     elements = {
@@ -566,7 +560,8 @@ function showStatus(message, type = 'info', lastDownloadId = null) {
         
         const actionNode = document.createElement('span');
         actionNode.style.marginLeft = '8px'; // Add some space
-        actionNode.appendChild(actionNode);
+        actionNode.appendChild(linkNode);
+        elements.statusArea.appendChild(actionNode);
     }
 }
 
