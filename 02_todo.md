@@ -292,21 +292,29 @@ Goal: Create a user-friendly welcome page to guide users on how to pin and use t
 
 Goal: Implement UI improvements based on new requirements.
 
-- [ ] **Step 25: Make CSV Separator Control Always Visible**
-    - **Goal**: Remove the logic that hides the CSV separator input and related checkboxes.
+- [x] **Step 25: Refine CSV Controls Visibility**
+    - **Goal**: Adjust the logic to make the separator input always visible, while the 'Include text' checkboxes remain dynamic.
     - **Tasks**:
-        1.  In `src/bulk.js`, locate the `input` event listener for the main textarea.
-        2.  Remove the code that dynamically hides/shows the separator input and the "Include top/bottom text" checkboxes.
-        3.  Ensure these controls are now always visible by default.
+        1.  In `src/bulk.js`, modify the `updateCSVControls` function.
+        2.  The logic now correctly shows the separator input at all times.
+        3.  The "Include top/bottom text" checkboxes are shown only when the separator character is detected in the textarea.
 
-- [ ] **Step 26: Implement Rating Banner**
+- [x] **Step 26: Implement Rating Banner**
     - **Goal**: Add a persistent, interactive rating banner at the bottom of the page.
     - **Tasks**:
-        1.  **HTML**: In `bulk.html`, add a `div` for the rating banner with the text "Rate us: " and five `<span>` elements for the stars.
-        2.  **CSS**: In `bulk.css`, style the banner to be fixed to the bottom of the viewport (`position: fixed`), with a background color and appropriate padding. Style the star elements. Create a `.hover` class for the yellow-on-hover effect.
-        3.  **JavaScript**: In `src/bulk.js`:
-            - Define constants for the CWS URL and a placeholder for the Google Form URL.
-            - Add `mouseover`, `mouseout`, and `click` event listeners to the stars.
-            - On `mouseover`, make the current star and all preceding ones yellow.
-            - On `mouseout`, return all stars to their default (gray) color.
-            - On `click`, check the star's rating (e.g., its index). If 1-3, open the Google Form URL. If 4-5, open the CWS URL.
+        1.  **HTML**: Added the banner structure to `bulk.html`.
+        2.  **CSS**: Styled the banner as a light, rounded-corner box fixed to the bottom-center of the viewport.
+        3.  **JavaScript**: Implemented event listeners for hover effects and click actions on the stars, redirecting users to the CWS or a feedback form.
+
+---
+
+### Phase 9: Bug Fixes and Final Polish
+
+Goal: Address critical bugs found during testing.
+
+- [x] **Step 27: Resolve Critical Bugs**
+    - **Goal**: Fix issues related to event handling and DOM manipulation.
+    - **Tasks**:
+        1.  **Fixed Double File Picker**: In `src/bulk.js`, removed a duplicate `DOMContentLoaded` event listener that caused event handlers to be registered twice.
+        2.  **Fixed `appendChild` Error**: In `src/bulk.js`, corrected a typo in the `showStatus` function where a node was being appended to itself.
+        3.  **Fixed Syntax Error**: Added a missing closing brace `}` to the `showStatus` function to resolve an "Unexpected end of file" error.

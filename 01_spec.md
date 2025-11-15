@@ -20,7 +20,7 @@ The UI must be responsive and functional in narrow (mobile-like) views.
     - **Separator Input**: A text input for the CSV separator. Default value: `;`.
     - **Top Text Checkbox**: A checkbox labeled "Include top text". Checked by default.
     - **Bottom Text Checkbox**: A checkbox labeled "Include bottom text". Checked by default.
-    - *Behavior*: The separator input and checkboxes are only visible if the content of the Data Input Textarea contains the separator character.
+    - *Behavior*: The **Separator Input** is always visible. The **Top/Bottom Text Checkboxes** are only visible if the content of the Data Input Textarea contains the separator character.
 4.  **Data Input Textarea**:
     - A multi-line textarea for user data.
     - Fixed height with a scrollbar for overflow.
@@ -36,6 +36,12 @@ The UI must be responsive and functional in narrow (mobile-like) views.
     - **Image Size Input**: A select dropdown for QR code pixel dimensions with predefined options (64, 128, 256, 512, 1024, 2048, 4096). Default: `512`.
     - **File Name Input**: A text input for a custom part of the output filename. Default: `qr_code`.
         - Validation: Must only contain letters, numbers, hyphens (`-`), and underscores (`_`). No spaces.
+8.  **Rating Banner**:
+    - A small, light-colored banner fixed to the bottom-center of the screen.
+    - Contains the text "Rate us:" and five interactive stars.
+    - Hovering over the stars highlights them.
+    - Clicking 1-3 stars redirects the user to a feedback form.
+    - Clicking 4-5 stars redirects the user to the Chrome Web Store page for the extension.
 
 ## 3. Architecture
 

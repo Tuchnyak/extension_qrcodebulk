@@ -52,6 +52,8 @@ The extension is fully functional and ready for testing. All features from the s
 - File upload functionality
 - Advanced settings (image size, custom filename)
 - Responsive design for mobile/desktop
+- An interactive rating banner to gather user feedback.
+- Refined CSV controls for better usability (separator is always visible).
 
 ## Technical debt / Future optimization: multithreading
 
