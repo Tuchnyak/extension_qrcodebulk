@@ -285,3 +285,28 @@ Goal: Create a user-friendly welcome page to guide users on how to pin and use t
           }
         });
         ```
+
+---
+
+### Phase 8: UI Enhancements (Separator and Rating)
+
+Goal: Implement UI improvements based on new requirements.
+
+- [ ] **Step 25: Make CSV Separator Control Always Visible**
+    - **Goal**: Remove the logic that hides the CSV separator input and related checkboxes.
+    - **Tasks**:
+        1.  In `src/bulk.js`, locate the `input` event listener for the main textarea.
+        2.  Remove the code that dynamically hides/shows the separator input and the "Include top/bottom text" checkboxes.
+        3.  Ensure these controls are now always visible by default.
+
+- [ ] **Step 26: Implement Rating Banner**
+    - **Goal**: Add a persistent, interactive rating banner at the bottom of the page.
+    - **Tasks**:
+        1.  **HTML**: In `bulk.html`, add a `div` for the rating banner with the text "Rate us: " and five `<span>` elements for the stars.
+        2.  **CSS**: In `bulk.css`, style the banner to be fixed to the bottom of the viewport (`position: fixed`), with a background color and appropriate padding. Style the star elements. Create a `.hover` class for the yellow-on-hover effect.
+        3.  **JavaScript**: In `src/bulk.js`:
+            - Define constants for the CWS URL and a placeholder for the Google Form URL.
+            - Add `mouseover`, `mouseout`, and `click` event listeners to the stars.
+            - On `mouseover`, make the current star and all preceding ones yellow.
+            - On `mouseout`, return all stars to their default (gray) color.
+            - On `click`, check the star's rating (e.g., its index). If 1-3, open the Google Form URL. If 4-5, open the CWS URL.

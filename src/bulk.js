@@ -101,15 +101,20 @@ function updateCSVControls() {
         line.trim() && separator && line.includes(separator)
     );
 
-    // Show/hide CSV-specific options
-    const csvOptions = document.querySelectorAll('.csv-options');
-    csvOptions.forEach(el => {
-        el.style.display = hasCSVData ? '' : 'none';
-    });
+    // Get the parent control groups for the checkboxes
+    const topTextControlGroup = elements.topTextCheckbox.closest('.control-group');
+    const bottomTextControlGroup = elements.bottomTextCheckbox.closest('.control-group');
 
-    // The logic to disable/enable checkboxes is no longer needed,
-    // as the controls are hidden entirely.
-    // We also don't need to uncheck them, as they are checked by default.
+    // Apply display logic only to the checkbox control groups
+    if (topTextControlGroup) {
+        topTextControlGroup.style.display = hasCSVData ? '' : 'none';
+    }
+    if (bottomTextControlGroup) {
+        bottomTextControlGroup.style.display = hasCSVData ? '' : 'none';
+    }
+
+    // The separator input's control group is intentionally not modified here,
+    // ensuring it remains always visible.
 }
 
 function updateGenerateButtonText() {
