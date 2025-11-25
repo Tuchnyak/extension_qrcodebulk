@@ -25,3 +25,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     // When a shared module is updated
   }
 });
+
+const UNINSTALL_URL = "https://tuchnyak.github.io/extension_qrcodebulk/uninstall.html";
+chrome.runtime.setUninstallURL(UNINSTALL_URL);
+
