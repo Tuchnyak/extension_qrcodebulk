@@ -104,6 +104,24 @@ class WorkerPool {
 
 // Global state
 let isGenerating = false;
+let workerPool = null;
+
+const WORKER_THRESHOLD = 1000;
+
+function getWorkerPool() {
+    if (!workerPool) {
+        workerPool = new WorkerPool('qr-worker.js');
+    }
+    return workerPool;
+}
+
+function isOffscreenCanvasSupported() {
+    return typeof OffscreenCanvas !== 'undefined';
+}
+
+function shouldUseWorkers(batchSize) {
+    return batchSize >= WORKER_THRESHOLD && isOffscreenCanvasSupported();
+}
 
 // DOM elements
 let elements = {};
@@ -317,109 +335,30 @@ async function handleGenerate() {
         const subDir = `001_bulk_qr_codes/${baseName}`;
 
         const padding = Math.max(2, Math.ceil(Math.log10(validLines.length + 1)));
-        let successCount = 0;
-        const errors = [];
 
-        if (isZipEnabled) {
-            // ZIP Archive Logic
-            const zip = new JSZip();
-            for (let i = 0; i < validLines.length; i++) {
-                const lineData = validLines[i];
-                const fileNumber = String(i + 1).padStart(padding, '0');
-                const fileName = `${baseName}_${fileNumber}.png`;
-                try {
-                    const blob = await generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText);
-                    zip.file(fileName, blob);
-                    successCount++;
-                    // update progress and yield briefly to allow UI update on large batches
-                    if (i % 5 === 0) {
-                        updateGenerateButtonProgress(successCount, validLines.length);
-                        await nextTick();
-                    }
-                } catch (error) {
-                    errors.push({ line: lineData.originalLine, lineNumber: lineData.lineNumber, reason: error.message });
-                }
-            }
-
-            // Merge parsing invalidLines into errors array so they are included in the ZIP
-            if (invalidLines.length > 0) {
-                invalidLines.forEach(il => errors.push({ line: il.line || il, lineNumber: il.lineNumber || '?', reason: il.reason || 'Invalid format' }));
-            }
-
-            // If there are errors, add errors.txt into the ZIP so the archive contains diagnostic info
-            if (errors.length > 0) {
-                const errorContent = errors.map(err => `Line ${err.lineNumber}: ${err.line} - ${err.reason}`).join('\n');
-                zip.file('errors.txt', errorContent);
-            }
-
-            // Download ZIP if there are any files or at least an errors.txt to provide feedback
-            if (successCount > 0 || errors.length > 0) {
-                const zipBlob = await zip.generateAsync({ type: 'blob' });
-                const zipUrl = URL.createObjectURL(zipBlob);
-                lastDownloadId = await new Promise((resolve, reject) => {
-                    chrome.downloads.download({
-                        url: zipUrl,
-                        filename: `${subDir}.zip`,
-                        saveAs: false
-                    }, (id) => {
-                        // Delay revoke to ensure Chrome had time to start the download
-                        setTimeout(() => URL.revokeObjectURL(zipUrl), 2000);
-                        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-                        else resolve(id);
-                    });
-                });
-            }
-
+        if (shouldUseWorkers(validLines.length)) {
+            lastDownloadId = await handleGenerateWithWorkers(
+                validLines, invalidLines, baseName, subDir, padding,
+                imageSize, includeTopText, includeBottomText, isZipEnabled
+            );
         } else {
-            // Individual File Logic
-            for (let i = 0; i < validLines.length; i++) {
-                const lineData = validLines[i];
-                const fileNumber = String(i + 1).padStart(padding, '0');
-                const fileName = `${baseName}_${fileNumber}.png`;
-                try {
-                    const blob = await generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText);
-                    const url = URL.createObjectURL(blob);
-                    lastDownloadId = await new Promise((resolve, reject) => {
-                        chrome.downloads.download({
-                            url: url,
-                            filename: `${subDir}/${fileName}`,
-                            saveAs: false
-                        }, (id) => {
-                            URL.revokeObjectURL(url);
-                            if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-                            else resolve(id);
-                        });
-                    });
-                    successCount++;
-                    // update progress and yield occasionally
-                    if (i % 5 === 0) {
-                        updateGenerateButtonProgress(successCount, validLines.length);
-                        await nextTick();
-                    }
-                } catch (error) {
-                    errors.push({ line: lineData.originalLine, lineNumber: lineData.lineNumber, reason: error.message });
-                }
-            }
+            lastDownloadId = await handleGenerateInline(
+                validLines, invalidLines, baseName, subDir, padding,
+                imageSize, includeTopText, includeBottomText, isZipEnabled
+            );
         }
 
-        // Create error log if there are errors and ZIP is not used
-        if (!isZipEnabled && (invalidLines.length > 0 || errors.length > 0)) {
-            const allErrors = [...invalidLines, ...errors];
-            await createErrorLog(allErrors, subDir);
-        }
-
-        // Show status message
         const endTime = performance.now();
         const duration = formatDuration(endTime - startTime);
-        const message = `Generated ${successCount} QR codes in ${duration}.`;
-        const errorCount = invalidLines.length + errors.length;
-        
-        let fullMessage = message;
+        const successCount = validLines.length - invalidLines.length;
+        const errorCount = invalidLines.length;
+
+        let message = `Generated ${successCount} QR codes in ${duration}.`;
         if (errorCount > 0) {
-            fullMessage += ' There are some problems. See errors.txt for details.';
+            message += ' There are some problems. See errors.txt for details.';
         }
 
-        showStatus(fullMessage, errorCount > 0 ? 'error' : 'success', lastDownloadId);
+        showStatus(message, errorCount > 0 ? 'error' : 'success', lastDownloadId);
 
     } catch (error) {
         console.error('Generation failed:', error);
@@ -429,6 +368,195 @@ async function handleGenerate() {
         restoreGenerateButtonText();
         unlockUI();
     }
+}
+
+async function handleGenerateWithWorkers(validLines, invalidLines, baseName, subDir, padding, imageSize, includeTopText, includeBottomText, isZipEnabled) {
+    let lastDownloadId = null;
+    const pool = getWorkerPool();
+    const errors = [];
+
+    try {
+        await pool.initialize();
+    } catch (error) {
+        console.warn('Worker pool initialization failed, falling back to inline generation:', error);
+        return handleGenerateInline(validLines, invalidLines, baseName, subDir, padding, imageSize, includeTopText, includeBottomText, isZipEnabled);
+    }
+
+    const tasks = validLines.map((lineData, i) => ({
+        index: i,
+        lineData,
+        fileNumber: String(i + 1).padStart(padding, '0')
+    }));
+
+    const results = [];
+    let completed = 0;
+
+    const promises = tasks.map(task => {
+        return pool.enqueue({
+            url: task.lineData.url,
+            width: imageSize,
+            topText: task.lineData.topText,
+            bottomText: task.lineData.bottomText,
+            includeTopText,
+            includeBottomText
+        }).then(blob => {
+            results.push({ index: task.index, blob, fileNumber: task.fileNumber });
+            completed++;
+            if (completed % 10 === 0 || completed === tasks.length) {
+                updateGenerateButtonProgress(completed, tasks.length);
+            }
+        }).catch(error => {
+            errors.push({ line: task.lineData.originalLine, lineNumber: task.lineData.lineNumber, reason: error.message });
+            completed++;
+        });
+    });
+
+    await Promise.all(promises);
+
+    if (isZipEnabled) {
+        const zip = new JSZip();
+        
+        if (invalidLines.length > 0) {
+            invalidLines.forEach(il => errors.push({ line: il.line || il, lineNumber: il.lineNumber || '?', reason: il.reason || 'Invalid format' }));
+        }
+
+        results.sort((a, b) => a.index - b.index);
+        for (const result of results) {
+            const fileName = `${baseName}_${result.fileNumber}.png`;
+            zip.file(fileName, result.blob);
+        }
+
+        if (errors.length > 0) {
+            const errorContent = errors.map(err => `Line ${err.lineNumber}: ${err.line} - ${err.reason}`).join('\n');
+            zip.file('errors.txt', errorContent);
+        }
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const zipUrl = URL.createObjectURL(zipBlob);
+        lastDownloadId = await new Promise((resolve, reject) => {
+            chrome.downloads.download({
+                url: zipUrl,
+                filename: `${subDir}.zip`,
+                saveAs: false
+            }, (id) => {
+                setTimeout(() => URL.revokeObjectURL(zipUrl), 2000);
+                if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+                else resolve(id);
+            });
+        });
+    } else {
+        results.sort((a, b) => a.index - b.index);
+        for (const result of results) {
+            const fileName = `${baseName}_${result.fileNumber}.png`;
+            const url = URL.createObjectURL(result.blob);
+            await new Promise((resolve, reject) => {
+                chrome.downloads.download({
+                    url: url,
+                    filename: `${subDir}/${fileName}`,
+                    saveAs: false
+                }, (id) => {
+                    URL.revokeObjectURL(url);
+                    if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+                    else resolve(id);
+                });
+            });
+            lastDownloadId = null;
+        }
+
+        if (invalidLines.length > 0 || errors.length > 0) {
+            const allErrors = [...invalidLines, ...errors];
+            await createErrorLog(allErrors, subDir);
+        }
+    }
+
+    return lastDownloadId;
+}
+
+async function handleGenerateInline(validLines, invalidLines, baseName, subDir, padding, imageSize, includeTopText, includeBottomText, isZipEnabled) {
+    let lastDownloadId = null;
+    const errors = [];
+    let successCount = 0;
+
+    if (isZipEnabled) {
+        const zip = new JSZip();
+        for (let i = 0; i < validLines.length; i++) {
+            const lineData = validLines[i];
+            const fileNumber = String(i + 1).padStart(padding, '0');
+            const fileName = `${baseName}_${fileNumber}.png`;
+            try {
+                const blob = await generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText);
+                zip.file(fileName, blob);
+                successCount++;
+                if (i % 5 === 0) {
+                    updateGenerateButtonProgress(successCount, validLines.length);
+                    await nextTick();
+                }
+            } catch (error) {
+                errors.push({ line: lineData.originalLine, lineNumber: lineData.lineNumber, reason: error.message });
+            }
+        }
+
+        if (invalidLines.length > 0) {
+            invalidLines.forEach(il => errors.push({ line: il.line || il, lineNumber: il.lineNumber || '?', reason: il.reason || 'Invalid format' }));
+        }
+
+        if (errors.length > 0) {
+            const errorContent = errors.map(err => `Line ${err.lineNumber}: ${err.line} - ${err.reason}`).join('\n');
+            zip.file('errors.txt', errorContent);
+        }
+
+        if (successCount > 0 || errors.length > 0) {
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            const zipUrl = URL.createObjectURL(zipBlob);
+            lastDownloadId = await new Promise((resolve, reject) => {
+                chrome.downloads.download({
+                    url: zipUrl,
+                    filename: `${subDir}.zip`,
+                    saveAs: false
+                }, (id) => {
+                    setTimeout(() => URL.revokeObjectURL(zipUrl), 2000);
+                    if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+                    else resolve(id);
+                });
+            });
+        }
+
+    } else {
+        for (let i = 0; i < validLines.length; i++) {
+            const lineData = validLines[i];
+            const fileNumber = String(i + 1).padStart(padding, '0');
+            const fileName = `${baseName}_${fileNumber}.png`;
+            try {
+                const blob = await generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText);
+                const url = URL.createObjectURL(blob);
+                lastDownloadId = await new Promise((resolve, reject) => {
+                    chrome.downloads.download({
+                        url: url,
+                        filename: `${subDir}/${fileName}`,
+                        saveAs: false
+                    }, (id) => {
+                        URL.revokeObjectURL(url);
+                        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+                        else resolve(id);
+                    });
+                });
+                successCount++;
+                if (i % 5 === 0) {
+                    updateGenerateButtonProgress(successCount, validLines.length);
+                    await nextTick();
+                }
+            } catch (error) {
+                errors.push({ line: lineData.originalLine, lineNumber: lineData.lineNumber, reason: error.message });
+            }
+        }
+
+        if (invalidLines.length > 0 || errors.length > 0) {
+            const allErrors = [...invalidLines, ...errors];
+            await createErrorLog(allErrors, subDir);
+        }
+    }
+
+    return lastDownloadId;
 }
 
 async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText) {

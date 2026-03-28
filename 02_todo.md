@@ -360,13 +360,13 @@ UI stays responsive
         4.  Export as PNG blob via `canvas.convertToBlob()`.
         5.  Return `{ index, blob }` via `postMessage`.
 
-- [ ] **Step 30: Integrate Worker Pool into Main App**
+- [x] **Step 30: Integrate Worker Pool into Main App**
     - **Goal**: Replace inline generation with worker-based processing.
     - **Tasks**:
-        1.  In `src/bulk.js`, add conditional logic: use workers for batches >= 1000 items, fallback to current implementation for smaller batches.
-        2.  Collect results from workers and build ZIP (if enabled) or trigger individual downloads.
-        3.  Update progress indicator to reflect worker activity.
-        4.  Handle worker errors gracefully — fall back to main thread if worker creation fails.
+        1.  In `src/bulk.js`, added conditional logic: use workers for batches >= 1000 items, fallback to current implementation for smaller batches.
+        2.  Implemented `handleGenerateWithWorkers()` to collect results from workers and build ZIP or trigger individual downloads.
+        3.  Progress indicator reflects worker activity.
+        4.  Graceful fallback to main thread if worker creation fails.
 
 - [ ] **Step 31: Memory Optimization for Large ZIPs**
     - **Goal**: Prevent memory issues with very large archives.
