@@ -61,6 +61,8 @@ The extension is fully functional and ready for testing. All features from the s
 
 The bulk QR generation work is currently implemented on the main thread. For very large batches (thousands of images) this can become CPU-bound and cause long total run times or UI responsiveness issues. Below are low-risk to higher-effort options to improve throughput and responsiveness:
 
+- Preview of a QR-Code by first row in the input text-box. Should represent configuration combination of UI state. Should appear in the right empty "white" side of UI. Should be collapsible by "expand" button. Preview should collapse by left slide under the main UI part. Expand to the right "white empty" page part by sliding from behind of a main part. Preview should be updated if control UI has change its state.
+
 - Web Workers: Move QR generation and canvas compositing into Web Workers. Pros: keeps UI thread responsive; easy to scale concurrency by spawning multiple workers. Cons: OffscreenCanvas support varies across browsers; transferring ImageBitmap/ArrayBuffer adds serialization overhead.
 
 - OffscreenCanvas: Use OffscreenCanvas inside workers to draw and export images without blocking the main thread. Pros: avoids DOM/canvas on main thread and can be faster. Cons: not universally available in all environments; increased complexity.
