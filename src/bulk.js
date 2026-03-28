@@ -58,11 +58,12 @@ function wireUpEventListeners() {
 
     elements.csvFileInput.addEventListener('change', handleFileUpload);
 
-    // Textarea changes - update CSV controls and preview
+    // Textarea changes - update CSV controls, preview, and save text
     elements.dataTextarea.addEventListener('input', () => {
         updateCSVControls();
         updateGenerateButtonText();
         renderPreview();
+        saveTextareaContent();
     });
 
     // Separator changes - update CSV controls and preview
@@ -615,6 +616,10 @@ function restorePreviewPanelState() {
     });
 }
 
+function saveTextareaContent() {
+    chrome.storage.local.set({ textareaContent: elements.dataTextarea.value });
+}
+
 function renderPreview() {
     const textareaContent = elements.dataTextarea.value.trim();
     const separator = elements.separatorInput.value;
@@ -781,4 +786,24 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGenerateButtonText();
     setupRatingBanner();
     restorePreviewPanelState();
+    restoreTextareaContent();
 });
+
+function restoreTextareaContent() {
+    chrome.storage.local.get(['textareaContent'], (result) => {
+        if (result.textareaContent) {
+            elements.dataTextarea.value = result.textareaContent;
+            updateCSVControls();
+            updateGenerateButtonText();
+            checkAndRenderPreview();
+        }
+    });
+}
+
+function checkAndRenderPreview() {
+    chrome.storage.local.get(['previewPanelExpanded'], (result) => {
+        if (result.previewPanelExpanded) {
+            renderPreview();
+        }
+    });
+}

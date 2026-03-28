@@ -386,7 +386,7 @@ UI stays responsive
 
 ---
 
-### Phase 11: QR Code Preview Panel
+### Phase 11: QR Code Preview Panel ✅ COMPLETED
 
 Goal: Add a live preview of the first QR code that reflects current UI settings. Preview slides in/out from the right side.
 
@@ -411,7 +411,7 @@ Context: The current UI has empty white space on the right. This space can be us
 
 ---
 
-- [ ] **Step 33: Design Preview Panel Layout**
+- [x] **Step 33: Design Preview Panel Layout**: ✅ COMPLETED
     - **Goal**: Create the HTML structure for the collapsible preview panel.
     - **Tasks**:
         1.  In `src/bulk.html`, add a new container for the preview panel (`<div id="preview-panel">`).
@@ -419,7 +419,7 @@ Context: The current UI has empty white space on the right. This space can be us
         3.  Inside the panel, add a canvas element (`<canvas id="preview-canvas">`) for QR rendering.
         4.  Position the panel to the right of the main container using CSS.
 
-- [ ] **Step 34: Style Preview Panel with Animations**
+- [x] **Step 34: Style Preview Panel with Animations**: ✅ COMPLETED
     - **Goal**: Implement slide-in/slide-out animations using CSS transforms.
     - **Tasks**:
         1.  In `src/bulk.css`, add styles for `#preview-panel`:
@@ -430,7 +430,7 @@ Context: The current UI has empty white space on the right. This space can be us
         2.  Style the toggle button to be visible and positioned appropriately.
         3.  Ensure the panel doesn't overlap the main content when collapsed.
 
-- [ ] **Step 35: Implement Preview Rendering Logic**
+- [x] **Step 35: Implement Preview Rendering Logic**: ✅ COMPLETED
     - **Goal**: Generate and display a preview QR code based on the first valid line and current settings.
     - **Tasks**:
         1.  In `src/bulk.js`, create a `renderPreview()` function that:
@@ -443,7 +443,7 @@ Context: The current UI has empty white space on the right. This space can be us
             - Textarea input change
             - Any setting control change (separator, size, checkboxes)
 
-- [ ] **Step 36: Wire Up Toggle Button**
+- [x] **Step 36: Wire Up Toggle Button**: ✅ COMPLETED
     - **Goal**: Make the expand/collapse button functional.
     - **Tasks**:
         1.  In `src/bulk.js`, add click event listener to `#preview-toggle`.
@@ -451,20 +451,20 @@ Context: The current UI has empty white space on the right. This space can be us
         3.  Update button text/icon based on state (e.g., "Preview" / "Hide Preview").
         4.  Consider saving panel state to `chrome.storage.local` so it remembers its state across sessions.
 
-- [ ] **Step 37: Handle Empty/Invalid First Line**
+- [x] **Step 37: Handle Empty/Invalid First Line**: ✅ COMPLETED
     - **Goal**: Show appropriate feedback when preview can't be generated.
     - **Tasks**:
         1.  If the textarea is empty or the first line is invalid, show a placeholder message in the preview area.
         2.  Use the status area style (info) for this message.
         3.  Clear the preview canvas when data is invalid.
 
-- [ ] **Step 38: Responsive Behavior**
+- [x] **Step 38: Responsive Behavior**: ✅ COMPLETED
     - **Goal**: Ensure preview panel works on smaller screens.
     - **Tasks**:
         1.  On narrow screens (< 768px), consider hiding or repositioning the preview panel.
         2.  Test that the slide animation works correctly at various viewport widths.
 
-- [ ] **Verification**:
+- [x] **Verification**: ✅ COMPLETED
     - **Goal**: Confirm all preview functionality works correctly.
     - **Action**:
         1.  Enter a URL in the textarea. Verify preview updates and shows the QR.
