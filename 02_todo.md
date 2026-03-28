@@ -342,13 +342,13 @@ UI stays responsive
 
 ---
 
-- [ ] **Step 28: Create Worker Pool Manager**
+- [x] **Step 28: Create Worker Pool Manager**
     - **Goal**: Implement a pool of workers based on `navigator.hardwareConcurrency`.
     - **Tasks**:
-        1.  Create `src/qr-worker.js` — a dedicated worker file for QR generation.
-        2.  Create `src/worker-pool.js` — manages a pool of workers and task distribution.
+        1.  Created `src/qr-worker.js` — a dedicated worker file for QR generation.
+        2.  Added `WorkerPool` class to `src/bulk.js` — manages a pool of workers and task distribution.
         3.  Pool should support bounded concurrency (no more than `hardwareConcurrency` workers).
-        4.  Implement task queue with callback-based result delivery.
+        4.  Implemented task queue with callback-based result delivery.
         5.  Workers communicate via `postMessage`/`onmessage`.
 
 - [ ] **Step 29: Implement OffscreenCanvas Rendering in Worker**

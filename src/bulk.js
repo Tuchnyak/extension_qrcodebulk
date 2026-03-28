@@ -1,6 +1,107 @@
 import QRCode from 'qrcode';
 import JSZip from 'jszip';
 
+class WorkerPool {
+    constructor(workerPath, poolSize) {
+        this.workerPath = workerPath;
+        this.poolSize = poolSize || navigator.hardwareConcurrency || 4;
+        this.workers = [];
+        this.taskQueue = [];
+        this.activeWorkers = 0;
+        this.isInitialized = false;
+    }
+
+    async initialize() {
+        if (this.isInitialized) return;
+
+        for (let i = 0; i < this.poolSize; i++) {
+            const worker = new Worker(this.workerPath);
+            worker.onmessage = (event) => this.handleWorkerMessage(worker, event.data);
+            worker.onerror = (error) => this.handleWorkerError(worker, error);
+            this.workers.push({ worker, busy: false });
+        }
+
+        this.isInitialized = true;
+    }
+
+    handleWorkerMessage(worker, data) {
+        const task = this.taskQueue.find(t => t.id === data.id);
+        if (!task) return;
+
+        if (data.success) {
+            task.resolve(data.blob);
+        } else {
+            task.reject(new Error(data.error));
+        }
+
+        worker.busy = false;
+        this.activeWorkers--;
+        this.processNextTask();
+    }
+
+    handleWorkerError(worker, error) {
+        console.error('Worker error:', error);
+        const task = this.taskQueue.find(t => t.worker === worker);
+        if (task) {
+            task.reject(error);
+            this.taskQueue = this.taskQueue.filter(t => t.id !== task.id);
+            worker.busy = false;
+            this.activeWorkers--;
+        }
+    }
+
+    processNextTask() {
+        if (this.taskQueue.length === 0) return;
+
+        const availableWorker = this.workers.find(w => !w.busy);
+        if (!availableWorker) return;
+
+        const task = this.taskQueue.shift();
+        if (!task) return;
+
+        availableWorker.busy = true;
+        this.activeWorkers++;
+        task.worker = availableWorker.worker;
+
+        availableWorker.worker.postMessage({
+            id: task.id,
+            url: task.url,
+            width: task.width,
+            topText: task.topText,
+            bottomText: task.bottomText,
+            includeTopText: task.includeTopText,
+            includeBottomText: task.includeBottomText
+        });
+    }
+
+    enqueue(taskData) {
+        return new Promise((resolve, reject) => {
+            const task = {
+                id: Date.now() + Math.random(),
+                url: taskData.url,
+                width: taskData.width,
+                topText: taskData.topText,
+                bottomText: taskData.bottomText,
+                includeTopText: taskData.includeTopText,
+                includeBottomText: taskData.includeBottomText,
+                resolve,
+                reject,
+                worker: null
+            };
+
+            this.taskQueue.push(task);
+            this.processNextTask();
+        });
+    }
+
+    terminate() {
+        this.workers.forEach(w => w.worker.terminate());
+        this.workers = [];
+        this.taskQueue = [];
+        this.isInitialized = false;
+    }
+}
+
 // Global state
 let isGenerating = false;
 
