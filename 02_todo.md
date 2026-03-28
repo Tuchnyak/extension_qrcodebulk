@@ -321,7 +321,7 @@ Goal: Address critical bugs found during testing.
 
 ---
 
-### Phase 10: Performance Optimization for Large Batches
+### Phase 10: Performance Optimization for Large Batches (DEPRECATED for now)
 
 Goal: Implement Web Workers + OffscreenCanvas for non-blocking QR generation with batches of 1000+ codes.
 
@@ -386,15 +386,99 @@ UI stays responsive
 
 ---
 
+### Phase 11: QR Code Preview Panel
+
+Goal: Add a live preview of the first QR code that reflects current UI settings. Preview slides in/out from the right side.
+
+Context: The current UI has empty white space on the right. This space can be used for a collapsible preview panel showing how QR codes will look based on the first input line and current settings (image size, top/bottom text, etc.).
+
+**Layout Design:**
+```
++------------------+------------------------+
+|                  |                        |
+|   Main UI        |   Preview Panel        |
+|   (left side)    |   (right side)        |
+|                  |   [QR preview here]    |
+|                  |                        |
+|                  |   [Expand/Collapse]    |
++------------------+------------------------+
+```
+
+**Animation:**
+- **Collapse**: Preview slides LEFT, hidden behind main UI (translateX to -100%)
+- **Expand**: Preview slides RIGHT from behind main UI (translateX to 0%)
+- Use CSS transitions for smooth animation
+
+---
+
+- [ ] **Step 33: Design Preview Panel Layout**
+    - **Goal**: Create the HTML structure for the collapsible preview panel.
+    - **Tasks**:
+        1.  In `src/bulk.html`, add a new container for the preview panel (`<div id="preview-panel">`).
+        2.  Add a toggle button (`<button id="preview-toggle">`) to expand/collapse the panel.
+        3.  Inside the panel, add a canvas element (`<canvas id="preview-canvas">`) for QR rendering.
+        4.  Position the panel to the right of the main container using CSS.
+
+- [ ] **Step 34: Style Preview Panel with Animations**
+    - **Goal**: Implement slide-in/slide-out animations using CSS transforms.
+    - **Tasks**:
+        1.  In `src/bulk.css`, add styles for `#preview-panel`:
+            - Position: fixed or absolute on the right side
+            - Initial state: `transform: translateX(100%)` (hidden, off-screen right)
+            - Expanded state: `transform: translateX(0)` (visible)
+            - Transition: `transform 0.3s ease-in-out`
+        2.  Style the toggle button to be visible and positioned appropriately.
+        3.  Ensure the panel doesn't overlap the main content when collapsed.
+
+- [ ] **Step 35: Implement Preview Rendering Logic**
+    - **Goal**: Generate and display a preview QR code based on the first valid line and current settings.
+    - **Tasks**:
+        1.  In `src/bulk.js`, create a `renderPreview()` function that:
+            - Gets the first valid line from the textarea.
+            - Reads current settings: image size, top text, bottom text, include checkboxes.
+            - Uses `QRCode.toCanvas()` to render to the preview canvas.
+            - Applies composite rendering if text overlays are enabled.
+        2.  Call `renderPreview()` on:
+            - Page load (with default/empty data)
+            - Textarea input change
+            - Any setting control change (separator, size, checkboxes)
+
+- [ ] **Step 36: Wire Up Toggle Button**
+    - **Goal**: Make the expand/collapse button functional.
+    - **Tasks**:
+        1.  In `src/bulk.js`, add click event listener to `#preview-toggle`.
+        2.  Toggle a CSS class (e.g., `expanded`) on the preview panel.
+        3.  Update button text/icon based on state (e.g., "Preview" / "Hide Preview").
+        4.  Consider saving panel state to `chrome.storage.local` so it remembers its state across sessions.
+
+- [ ] **Step 37: Handle Empty/Invalid First Line**
+    - **Goal**: Show appropriate feedback when preview can't be generated.
+    - **Tasks**:
+        1.  If the textarea is empty or the first line is invalid, show a placeholder message in the preview area.
+        2.  Use the status area style (info) for this message.
+        3.  Clear the preview canvas when data is invalid.
+
+- [ ] **Step 38: Responsive Behavior**
+    - **Goal**: Ensure preview panel works on smaller screens.
+    - **Tasks**:
+        1.  On narrow screens (< 768px), consider hiding or repositioning the preview panel.
+        2.  Test that the slide animation works correctly at various viewport widths.
+
+- [ ] **Verification**:
+    - **Goal**: Confirm all preview functionality works correctly.
+    - **Action**:
+        1.  Enter a URL in the textarea. Verify preview updates and shows the QR.
+        2.  Enter CSV data (e.g., `top;url;bottom`). Verify text overlays appear.
+        3.  Click the toggle button. Verify slide animation works.
+        4.  Change image size. Verify preview updates.
+        5.  Toggle top/bottom text checkboxes. Verify preview updates.
+        6.  Clear the textarea. Verify placeholder message appears.
+        7.  Test on narrow viewport (mobile-like).
+
+---
+
 **Implementation Notes:**
 
-- **Browser Support**: OffscreenCanvas is not available in all contexts. Implement feature detection:
-  ```javascript
-  if (typeof OffscreenCanvas !== 'undefined') {
-      // Use workers
-  } else {
-      // Fallback to main thread
-  }
-  ```
-- **Worker Communication**: Transferable objects (`ArrayBuffer`) preferred over cloning for performance.
-- **Graceful Degradation**: Always keep the original implementation as a fallback.
+- **Performance**: Debounce `renderPreview()` calls to avoid excessive re-rendering during rapid input.
+- **Canvas Sizing**: Preview canvas should scale to fit the panel while maintaining aspect ratio.
+- **Accessibility**: Ensure the toggle button is keyboard accessible and has proper ARIA labels.
