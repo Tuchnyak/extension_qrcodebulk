@@ -318,3 +318,83 @@ Goal: Address critical bugs found during testing.
         1.  **Fixed Double File Picker**: In `src/bulk.js`, removed a duplicate `DOMContentLoaded` event listener that caused event handlers to be registered twice.
         2.  **Fixed `appendChild` Error**: In `src/bulk.js`, corrected a typo in the `showStatus` function where a node was being appended to itself.
         3.  **Fixed Syntax Error**: Added a missing closing brace `}` to the `showStatus` function to resolve an "Unexpected end of file" error.
+
+---
+
+### Phase 10: Performance Optimization for Large Batches
+
+Goal: Implement Web Workers + OffscreenCanvas for non-blocking QR generation with batches of 1000+ codes.
+
+Context: Current implementation runs on the main thread, blocking UI for large batches. Web Workers enable parallel processing; OffscreenCanvas allows canvas operations off the main thread.
+
+**Architecture Overview:**
+```
+Main Thread                    Worker Pool (n = hardwareConcurrency)
+    │                                   │
+    │── Task queue (URLs) ────────────>│
+    │                                   │── OffscreenCanvas renders QR
+    │                                   │── Add text overlays if needed
+    │                                   │── Convert to PNG blob
+    │<── Results (blob[]) ─────────────│
+    │                                   │
+UI stays responsive
+```
+
+---
+
+- [ ] **Step 28: Create Worker Pool Manager**
+    - **Goal**: Implement a pool of workers based on `navigator.hardwareConcurrency`.
+    - **Tasks**:
+        1.  Create `src/qr-worker.js` — a dedicated worker file for QR generation.
+        2.  Create `src/worker-pool.js` — manages a pool of workers and task distribution.
+        3.  Pool should support bounded concurrency (no more than `hardwareConcurrency` workers).
+        4.  Implement task queue with callback-based result delivery.
+        5.  Workers communicate via `postMessage`/`onmessage`.
+
+- [ ] **Step 29: Implement OffscreenCanvas Rendering in Worker**
+    - **Goal**: Move all canvas operations off the main thread.
+    - **Tasks**:
+        1.  In `qr-worker.js`, receive `{ url, width, topText, bottomText }` via message.
+        2.  Use `OffscreenCanvas` to render QR code via `qrcode` library.
+        3.  If text overlays requested, render them on the same canvas.
+        4.  Export as PNG blob via `canvas.convertToBlob()`.
+        5.  Return `{ index, blob }` via `postMessage`.
+
+- [ ] **Step 30: Integrate Worker Pool into Main App**
+    - **Goal**: Replace inline generation with worker-based processing.
+    - **Tasks**:
+        1.  In `src/bulk.js`, add conditional logic: use workers for batches >= 1000 items, fallback to current implementation for smaller batches.
+        2.  Collect results from workers and build ZIP (if enabled) or trigger individual downloads.
+        3.  Update progress indicator to reflect worker activity.
+        4.  Handle worker errors gracefully — fall back to main thread if worker creation fails.
+
+- [ ] **Step 31: Memory Optimization for Large ZIPs**
+    - **Goal**: Prevent memory issues with very large archives.
+    - **Tasks**:
+        1.  Consider streaming approach: add blobs to ZIP incrementally, not all at once.
+        2.  Alternatively, limit in-memory ZIP size and download in chunks if exceeds threshold.
+        3.  Monitor memory usage in Chrome DevTools during stress tests.
+
+- [ ] **Step 32: Verification and Benchmarking**
+    - **Goal**: Confirm performance improvement and no regressions.
+    - **Tasks**:
+        1.  Test with 100, 500, 1000, 5000 URLs.
+        2.  Measure UI responsiveness (main thread should not freeze).
+        3.  Compare generation time: old vs new implementation.
+        4.  Verify ZIP output is identical to current implementation.
+        5.  Test fallback path (workers unavailable).
+
+---
+
+**Implementation Notes:**
+
+- **Browser Support**: OffscreenCanvas is not available in all contexts. Implement feature detection:
+  ```javascript
+  if (typeof OffscreenCanvas !== 'undefined') {
+      // Use workers
+  } else {
+      // Fallback to main thread
+  }
+  ```
+- **Worker Communication**: Transferable objects (`ArrayBuffer`) preferred over cloning for performance.
+- **Graceful Degradation**: Always keep the original implementation as a fallback.

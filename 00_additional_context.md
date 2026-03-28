@@ -69,6 +69,4 @@ The bulk QR generation work is currently implemented on the main thread. For ver
 
 - Streaming ZIP / Incremental Writes: Instead of building a full in-memory ZIP (which can be memory-heavy for many files), stream entries to disk or use a streaming zip library that writes in chunks. Pros: lower memory footprint; better for very large archives. Cons: more complex, may require different APIs or bundling.
 
-- Server-side Bundling: Offload generation/zip creation to a server if privacy/scale tradeoffs permit. Pros: scalable and can use native tooling for speed. Cons: requires network transfer and has privacy/security implications.
-
 Recommendation (next steps): start with a Worker Pool + OffscreenCanvas where supported. That provides the best balance of responsiveness and throughput for the client-side use-case. Track this work as a discrete, testable follow-up (not required for the immediate release focused on correct error logging in ZIPs).
