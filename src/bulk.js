@@ -42,7 +42,11 @@ function initializeElements() {
         imageSizeInput: document.getElementById('image-size-input'),
         fileNameInput: document.getElementById('file-name-input'),
         zipCheckbox: document.getElementById('zip-checkbox'),
-        statusArea: document.getElementById('status-area')
+        statusArea: document.getElementById('status-area'),
+        previewToggle: document.getElementById('preview-toggle'),
+        previewPanel: document.getElementById('preview-panel'),
+        previewCanvas: document.getElementById('preview-canvas'),
+        previewPlaceholder: document.getElementById('preview-placeholder')
     };
 }
 
@@ -54,14 +58,28 @@ function wireUpEventListeners() {
 
     elements.csvFileInput.addEventListener('change', handleFileUpload);
 
-    // Textarea changes - update CSV controls
+    // Textarea changes - update CSV controls and preview
     elements.dataTextarea.addEventListener('input', () => {
         updateCSVControls();
         updateGenerateButtonText();
+        renderPreview();
     });
 
-    // Separator changes - update CSV controls
-    elements.separatorInput.addEventListener('input', updateCSVControls);
+    // Separator changes - update CSV controls and preview
+    elements.separatorInput.addEventListener('input', () => {
+        updateCSVControls();
+        renderPreview();
+    });
+
+    // Preview toggle
+    elements.previewToggle.addEventListener('click', togglePreview);
+
+    // Top/bottom text checkboxes - update preview
+    elements.topTextCheckbox.addEventListener('change', renderPreview);
+    elements.bottomTextCheckbox.addEventListener('change', renderPreview);
+
+    // Image size - update preview
+    elements.imageSizeInput.addEventListener('change', renderPreview);
 
     // Generate button
     elements.generateBtn.addEventListener('click', handleGenerate);
@@ -565,6 +583,115 @@ function showStatus(message, type = 'info', lastDownloadId = null) {
     }
 }
 
+// Preview Panel Logic
+function togglePreview() {
+    const isExpanded = elements.previewPanel.classList.toggle('expanded');
+    
+    if (isExpanded) {
+        elements.previewToggle.style.right = getPreviewPanelWidth();
+        renderPreview();
+    } else {
+        elements.previewToggle.style.right = '0';
+    }
+    
+    chrome.storage.local.set({ previewPanelExpanded: isExpanded });
+}
+
+function getPreviewPanelWidth() {
+    const width = window.innerWidth;
+    if (width <= 480) return '100%';
+    if (width <= 768) return '250px';
+    if (width <= 1024) return '280px';
+    return '400px';
+}
+
+function restorePreviewPanelState() {
+    chrome.storage.local.get(['previewPanelExpanded'], (result) => {
+        if (result.previewPanelExpanded) {
+            elements.previewPanel.classList.add('expanded');
+            elements.previewToggle.style.right = getPreviewPanelWidth();
+            renderPreview();
+        }
+    });
+}
+
+function renderPreview() {
+    const textareaContent = elements.dataTextarea.value.trim();
+    const separator = elements.separatorInput.value;
+    const includeTopText = elements.topTextCheckbox.checked;
+    const includeBottomText = elements.bottomTextCheckbox.checked;
+    const imageSize = parseInt(elements.imageSizeInput.value) || 512;
+
+    if (!textareaContent) {
+        showPreviewPlaceholder('Enter a URL or CSV data to see preview');
+        return;
+    }
+
+    const firstLine = textareaContent.split('\n')[0].trim();
+    if (!firstLine) {
+        showPreviewPlaceholder('Enter a URL or CSV data to see preview');
+        return;
+    }
+
+    let topText = '';
+    let url = '';
+    let bottomText = '';
+
+    if (firstLine.includes(separator)) {
+        const parts = firstLine.split(separator).map(part => part.trim());
+        if (parts.length === 3) {
+            topText = parts[0];
+            url = parts[1];
+            bottomText = parts[2];
+        } else {
+            showPreviewPlaceholder('Invalid CSV format. Expected: text;URL;text');
+            return;
+        }
+    } else {
+        url = firstLine;
+    }
+
+    if (!url) {
+        showPreviewPlaceholder('No valid URL found');
+        return;
+    }
+
+    generatePreviewQR(url, imageSize, topText, bottomText, includeTopText, includeBottomText);
+}
+
+function showPreviewPlaceholder(message) {
+    elements.previewCanvas.style.display = 'none';
+    elements.previewPlaceholder.style.display = 'block';
+    elements.previewPlaceholder.textContent = message;
+}
+
+async function generatePreviewQR(url, imageSize, topText, bottomText, includeTopText, includeBottomText) {
+    try {
+        const canvas = elements.previewCanvas;
+        const ctx = canvas.getContext('2d');
+
+        const qrCanvas = await QRCode.toCanvas(url, { width: imageSize });
+
+        canvas.width = qrCanvas.width;
+        canvas.height = qrCanvas.height;
+
+        let finalCanvas = qrCanvas;
+
+        if ((includeTopText && topText) || (includeBottomText && bottomText)) {
+            finalCanvas = createCompositeCanvas(qrCanvas, { topText, bottomText }, imageSize, includeTopText, includeBottomText);
+        }
+
+        canvas.width = finalCanvas.width;
+        canvas.height = finalCanvas.height;
+        ctx.drawImage(finalCanvas, 0, 0);
+
+        elements.previewCanvas.style.display = 'block';
+        elements.previewPlaceholder.style.display = 'none';
+    } catch (error) {
+        showPreviewPlaceholder('Failed to generate preview');
+    }
+}
+
 // Rating Banner Logic
 const CHROME_WEB_STORE_URL = "https://chromewebstore.google.com/detail/bulk-qr-code-generator/nkpcheohehognkoamimhhjpgclhhleap?hl=en";
 const GOOGLE_FORM_URL = "https://forms.gle/43rRgL9snFnLXKFe8";
@@ -652,5 +779,6 @@ document.addEventListener('DOMContentLoaded', () => {
     wireUpEventListeners();
     updateCSVControls();
     updateGenerateButtonText();
-    setupRatingBanner(); // Call the new function here
+    setupRatingBanner();
+    restorePreviewPanelState();
 });

@@ -379,3 +379,135 @@ input[type="checkbox"] {
 .rating-banner .star.selected {
     color: #ffc107; /* Yellow stars */
 }
+
+/* Preview Toggle Button */
+.preview-toggle {
+    position: fixed;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    background-color: #ff0000;
+    color: white;
+    border: none;
+    border-radius: 8px 0 0 8px;
+    padding: 12px 6px;
+    cursor: pointer;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 14px;
+    font-weight: 700;
+    z-index: 1002;
+    transition: background-color 0.2s;
+    width: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-toggle:hover {
+    background-color: #cc0000;
+}
+
+.preview-toggle-icon {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+/* Preview Panel */
+.preview-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    height: 100vh;
+    background-color: #f8f9fa;
+    border-left: 1px solid #e9ecef;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.preview-panel.expanded {
+    transform: translateX(0);
+}
+
+.preview-header {
+    padding: 15px 20px;
+    background-color: white;
+    border-bottom: 2px solid #ff0000;
+}
+
+.preview-header h3 {
+    margin: 0;
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.preview-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.preview-placeholder {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+
+.preview-canvas {
+    max-width: 360px;
+    max-height: 80vh;
+    width: auto;
+    height: auto;
+    background-color: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .preview-panel {
+        width: 280px;
+    }
+    
+    .preview-canvas {
+        max-width: 240px;
+    }
+}
+
+@media (max-width: 768px) {
+    .preview-panel {
+        width: 250px;
+    }
+    
+    .preview-canvas {
+        max-width: 210px;
+    }
+}
+
+@media (max-width: 480px) {
+    .preview-panel {
+        width: 100%;
+    }
+    
+    .preview-canvas {
+        max-width: calc(100% - 20px);
+    }
+    
+    .preview-toggle {
+        padding: 8px 6px;
+        font-size: 12px;
+    }
+}
