@@ -25,8 +25,10 @@ class WorkerPool {
     }
 
     handleWorkerMessage(worker, data) {
-        const task = this.taskQueue.find(t => t.id === data.id);
-        if (!task) return;
+        const taskIndex = this.taskQueue.findIndex(t => t.id === data.id);
+        if (taskIndex === -1) return;
+        
+        const task = this.taskQueue.splice(taskIndex, 1)[0];
 
         if (data.success) {
             task.resolve(data.blob);
@@ -100,6 +102,16 @@ class WorkerPool {
         this.taskQueue = [];
         this.isInitialized = false;
     }
+
+    reset() {
+        this.workers.forEach(w => w.busy = false);
+        this.taskQueue = [];
+        this.activeWorkers = 0;
+    }
+
+    clearQueue() {
+        this.taskQueue = [];
+    }
 }
 
 // Global state
@@ -107,6 +119,23 @@ let isGenerating = false;
 let workerPool = null;
 
 const WORKER_THRESHOLD = 1000;
+const MAX_ZIP_FILES = 500;
+
+async function downloadZip(zip, filename) {
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const zipUrl = URL.createObjectURL(zipBlob);
+    return new Promise((resolve, reject) => {
+        chrome.downloads.download({
+            url: zipUrl,
+            filename: filename,
+            saveAs: false
+        }, (id) => {
+            setTimeout(() => URL.revokeObjectURL(zipUrl), 2000);
+            if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+            else resolve(id);
+        });
+    });
+}
 
 function getWorkerPool() {
     if (!workerPool) {
@@ -120,7 +149,7 @@ function isOffscreenCanvasSupported() {
 }
 
 function shouldUseWorkers(batchSize) {
-    return batchSize >= WORKER_THRESHOLD && isOffscreenCanvasSupported();
+    return false;
 }
 
 // DOM elements
@@ -361,7 +390,6 @@ async function handleGenerate() {
         showStatus(message, errorCount > 0 ? 'error' : 'success', lastDownloadId);
 
     } catch (error) {
-        console.error('Generation failed:', error);
         showStatus('Generation failed: ' + error.message, 'error');
     } finally {
         isGenerating = false;
@@ -374,76 +402,104 @@ async function handleGenerateWithWorkers(validLines, invalidLines, baseName, sub
     let lastDownloadId = null;
     const pool = getWorkerPool();
     const errors = [];
+    const results = [];
+    let completed = 0;
+    let inFlight = 0;
+    const MAX_CONCURRENT = navigator.hardwareConcurrency || 4;
+    const totalTasks = validLines.length;
 
     try {
         await pool.initialize();
+        pool.reset();
     } catch (error) {
-        console.warn('Worker pool initialization failed, falling back to inline generation:', error);
         return handleGenerateInline(validLines, invalidLines, baseName, subDir, padding, imageSize, includeTopText, includeBottomText, isZipEnabled);
     }
 
-    const tasks = validLines.map((lineData, i) => ({
-        index: i,
-        lineData,
-        fileNumber: String(i + 1).padStart(padding, '0')
-    }));
-
-    const results = [];
-    let completed = 0;
-
-    const promises = tasks.map(task => {
+    const processTask = (task, index) => {
         return pool.enqueue({
-            url: task.lineData.url,
+            url: task.url,
             width: imageSize,
-            topText: task.lineData.topText,
-            bottomText: task.lineData.bottomText,
+            topText: task.topText,
+            bottomText: task.bottomText,
             includeTopText,
             includeBottomText
         }).then(blob => {
-            results.push({ index: task.index, blob, fileNumber: task.fileNumber });
+            results.push({ index, blob, fileNumber: task.fileNumber });
             completed++;
-            if (completed % 10 === 0 || completed === tasks.length) {
-                updateGenerateButtonProgress(completed, tasks.length);
-            }
+            updateGenerateButtonProgress(completed, totalTasks);
+            return null;
         }).catch(error => {
-            errors.push({ line: task.lineData.originalLine, lineNumber: task.lineData.lineNumber, reason: error.message });
+            errors.push({ line: task.originalLine, lineNumber: task.lineNumber, reason: error.message });
             completed++;
+            updateGenerateButtonProgress(completed, totalTasks);
+            return null;
         });
-    });
+    };
 
-    await Promise.all(promises);
+    const tasks = validLines.map((lineData, i) => ({
+        url: lineData.url,
+        topText: lineData.topText,
+        bottomText: lineData.bottomText,
+        originalLine: lineData.originalLine,
+        lineNumber: lineData.lineNumber,
+        fileNumber: String(i + 1).padStart(padding, '0')
+    }));
+
+    let taskIndex = 0;
+    const workers = [];
+
+    for (let w = 0; w < MAX_CONCURRENT; w++) {
+        const workerPromise = (async () => {
+            while (taskIndex < totalTasks) {
+                const currentIndex = taskIndex++;
+                if (currentIndex >= totalTasks) break;
+                
+                inFlight++;
+                await processTask(tasks[currentIndex], currentIndex);
+                inFlight--;
+                
+                await nextTick();
+            }
+        })();
+        workers.push(workerPromise);
+    }
+
+    await Promise.all(workers);
 
     if (isZipEnabled) {
-        const zip = new JSZip();
-        
         if (invalidLines.length > 0) {
             invalidLines.forEach(il => errors.push({ line: il.line || il, lineNumber: il.lineNumber || '?', reason: il.reason || 'Invalid format' }));
         }
 
         results.sort((a, b) => a.index - b.index);
-        for (const result of results) {
-            const fileName = `${baseName}_${result.fileNumber}.png`;
-            zip.file(fileName, result.blob);
-        }
 
-        if (errors.length > 0) {
-            const errorContent = errors.map(err => `Line ${err.lineNumber}: ${err.line} - ${err.reason}`).join('\n');
-            zip.file('errors.txt', errorContent);
-        }
+        const numChunks = Math.ceil(results.length / MAX_ZIP_FILES);
+        
+        for (let chunk = 0; chunk < numChunks; chunk++) {
+            const chunkStart = chunk * MAX_ZIP_FILES;
+            const chunkEnd = Math.min(chunkStart + MAX_ZIP_FILES, results.length);
+            const chunkResults = results.slice(chunkStart, chunkEnd);
+            
+            const zip = new JSZip();
+            
+            for (const result of chunkResults) {
+                const fileName = `${baseName}_${result.fileNumber}.png`;
+                zip.file(fileName, result.blob);
+            }
 
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-        const zipUrl = URL.createObjectURL(zipBlob);
-        lastDownloadId = await new Promise((resolve, reject) => {
-            chrome.downloads.download({
-                url: zipUrl,
-                filename: `${subDir}.zip`,
-                saveAs: false
-            }, (id) => {
-                setTimeout(() => URL.revokeObjectURL(zipUrl), 2000);
-                if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-                else resolve(id);
-            });
-        });
+            if (chunk === numChunks - 1 && errors.length > 0) {
+                const errorContent = errors.map(err => `Line ${err.lineNumber}: ${err.line} - ${err.reason}`).join('\n');
+                zip.file('errors.txt', errorContent);
+            }
+
+            const zipSuffix = numChunks > 1 ? `_part${chunk + 1}` : '';
+            const zipFilename = `${subDir}${zipSuffix}.zip`;
+            
+            const downloadId = await downloadZip(zip, zipFilename);
+            if (chunk === numChunks - 1) {
+                lastDownloadId = downloadId;
+            }
+        }
     } else {
         results.sort((a, b) => a.index - b.index);
         for (const result of results) {
@@ -478,14 +534,15 @@ async function handleGenerateInline(validLines, invalidLines, baseName, subDir, 
     let successCount = 0;
 
     if (isZipEnabled) {
-        const zip = new JSZip();
+        const fileResults = [];
+        
         for (let i = 0; i < validLines.length; i++) {
             const lineData = validLines[i];
             const fileNumber = String(i + 1).padStart(padding, '0');
             const fileName = `${baseName}_${fileNumber}.png`;
             try {
                 const blob = await generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText);
-                zip.file(fileName, blob);
+                fileResults.push({ fileName, blob });
                 successCount++;
                 if (i % 5 === 0) {
                     updateGenerateButtonProgress(successCount, validLines.length);
@@ -500,25 +557,31 @@ async function handleGenerateInline(validLines, invalidLines, baseName, subDir, 
             invalidLines.forEach(il => errors.push({ line: il.line || il, lineNumber: il.lineNumber || '?', reason: il.reason || 'Invalid format' }));
         }
 
-        if (errors.length > 0) {
-            const errorContent = errors.map(err => `Line ${err.lineNumber}: ${err.line} - ${err.reason}`).join('\n');
-            zip.file('errors.txt', errorContent);
-        }
+        const numChunks = Math.ceil(fileResults.length / MAX_ZIP_FILES);
+        
+        for (let chunk = 0; chunk < numChunks; chunk++) {
+            const chunkStart = chunk * MAX_ZIP_FILES;
+            const chunkEnd = Math.min(chunkStart + MAX_ZIP_FILES, fileResults.length);
+            const chunkFiles = fileResults.slice(chunkStart, chunkEnd);
+            
+            const zip = new JSZip();
+            
+            for (const file of chunkFiles) {
+                zip.file(file.fileName, file.blob);
+            }
 
-        if (successCount > 0 || errors.length > 0) {
-            const zipBlob = await zip.generateAsync({ type: 'blob' });
-            const zipUrl = URL.createObjectURL(zipBlob);
-            lastDownloadId = await new Promise((resolve, reject) => {
-                chrome.downloads.download({
-                    url: zipUrl,
-                    filename: `${subDir}.zip`,
-                    saveAs: false
-                }, (id) => {
-                    setTimeout(() => URL.revokeObjectURL(zipUrl), 2000);
-                    if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-                    else resolve(id);
-                });
-            });
+            if (chunk === numChunks - 1 && errors.length > 0) {
+                const errorContent = errors.map(err => `Line ${err.lineNumber}: ${err.line} - ${err.reason}`).join('\n');
+                zip.file('errors.txt', errorContent);
+            }
+
+            const zipSuffix = numChunks > 1 ? `_part${chunk + 1}` : '';
+            const zipFilename = `${subDir}${zipSuffix}.zip`;
+            
+            const downloadId = await downloadZip(zip, zipFilename);
+            if (chunk === numChunks - 1) {
+                lastDownloadId = downloadId;
+            }
         }
 
     } else {

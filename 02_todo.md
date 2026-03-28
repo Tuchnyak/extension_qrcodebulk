@@ -360,41 +360,34 @@ UI stays responsive
         4.  Export as PNG blob via `canvas.convertToBlob()`.
         5.  Return `{ index, blob }` via `postMessage`.
 
-- [x] **Step 30: Integrate Worker Pool into Main App**
+- [x] **Step 30: Integrate Worker Pool into Main App** (Infrastructure Ready)
     - **Goal**: Replace inline generation with worker-based processing.
+    - **Status**: Infrastructure implemented, but workers are disabled due to DOM Canvas dependency in `qrcode` library.
     - **Tasks**:
         1.  In `src/bulk.js`, added conditional logic: use workers for batches >= 1000 items, fallback to current implementation for smaller batches.
         2.  Implemented `handleGenerateWithWorkers()` to collect results from workers and build ZIP or trigger individual downloads.
         3.  Progress indicator reflects worker activity.
         4.  Graceful fallback to main thread if worker creation fails.
+    - **Note**: `shouldUseWorkers()` currently returns `false` to disable worker path.
 
-- [ ] **Step 31: Memory Optimization for Large ZIPs**
+- [ ] **Step 31: Memory Optimization for Large ZIPs** (DEFERRED)
     - **Goal**: Prevent memory issues with very large archives.
-    - **Tasks**:
-        1.  Consider streaming approach: add blobs to ZIP incrementally, not all at once.
-        2.  Alternatively, limit in-memory ZIP size and download in chunks if exceeds threshold.
-        3.  Monitor memory usage in Chrome DevTools during stress tests.
+    - **Status**: Implementation added (chunking for >500 files per ZIP), but Web Workers integration is blocked.
+    - **Blocker**: `qrcode` library uses DOM Canvas internally which doesn't work in Web Workers.
 
-- [ ] **Step 32: Verification and Benchmarking**
-    - **Goal**: Confirm performance improvement and no regressions.
-    - **Tasks**:
-        1.  Test with 100, 500, 1000, 5000 URLs.
-        2.  Measure UI responsiveness (main thread should not freeze).
-        3.  Compare generation time: old vs new implementation.
-        4.  Verify ZIP output is identical to current implementation.
-        5.  Test fallback path (workers unavailable).
+- [ ] **Step 32: Web Workers for Large Batches** (DEFERRED)
+    - **Goal**: Non-blocking QR generation for 1000+ codes.
+    - **Status**: Worker pool and qr-worker infrastructure created.
+    - **Blocker**: `qrcode.toCanvas()` and `qrcode.toDataURL()` require DOM Canvas. Need to use `QRCode.create()` with custom OffscreenCanvas renderer.
+    - **Note**: Workers are currently disabled (`shouldUseWorkers()` returns `false`). Inline generation used for all batches.
 
 ---
 
-**Implementation Notes:**
+**Deferred Implementation Notes:**
 
-- **Browser Support**: OffscreenCanvas is not available in all contexts. Implement feature detection:
-  ```javascript
-  if (typeof OffscreenCanvas !== 'undefined') {
-      // Use workers
-  } else {
-      // Fallback to main thread
-  }
-  ```
-- **Worker Communication**: Transferable objects (`ArrayBuffer`) preferred over cloning for performance.
-- **Graceful Degradation**: Always keep the original implementation as a fallback.
+- **Problem**: The `qrcode` npm package's rendering functions (`toCanvas`, `toDataURL`) internally use `document.createElement('canvas')` which is not available in Web Workers.
+- **Solution Options**:
+    1. Use `QRCode.create()` to get the raw QR matrix, then render manually with `OffscreenCanvas` + `ImageData`
+    2. Use a different QR library that supports Workers natively (e.g., `qr-code-styling` with Web Worker support)
+    3. Use `qrcode` with `canvas` npm package in Worker context
+- **Current Workaround**: For large batches, UI will block but generation will complete.

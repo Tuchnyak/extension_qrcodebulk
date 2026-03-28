@@ -2,45 +2,99 @@ import QRCode from 'qrcode';
 
 self.onmessage = async function(event) {
     const { id, url, width, topText, bottomText, includeTopText, includeBottomText } = event.data;
-
+    
     try {
-        const blob = await generateQRCodeBlob(url, width, topText, bottomText, includeTopText, includeBottomText);
-        self.postMessage({ id, success: true, blob });
+        const dataUrl = await generateQRDataURL(url, width);
+        const blob = await dataURLtoBlob(dataUrl);
+        
+        if ((includeTopText && topText) || (includeBottomText && bottomText)) {
+            const finalBlob = await createCompositeImage(blob, topText, bottomText, width, includeTopText, includeBottomText);
+            self.postMessage({ id, success: true, blob: finalBlob });
+        } else {
+            self.postMessage({ id, success: true, blob: blob });
+        }
     } catch (error) {
         self.postMessage({ id, success: false, error: error.message });
     }
 };
 
-async function generateQRCodeBlob(url, width, topText, bottomText, includeTopText, includeBottomText) {
+function generateQRDataURL(text, width) {
     return new Promise((resolve, reject) => {
-        QRCode.toCanvas(url, { width }, (error, qrCanvas) => {
-            if (error) {
-                reject(new Error('QR code generation failed: ' + error.message));
-                return;
-            }
-
-            try {
-                let finalCanvas = qrCanvas;
-
-                if ((includeTopText && topText) || (includeBottomText && bottomText)) {
-                    finalCanvas = createCompositeCanvas(qrCanvas, topText, bottomText, width, includeTopText, includeBottomText);
-                }
-
-                finalCanvas.convertToBlob((blob) => {
-                    if (!blob) {
-                        reject(new Error('Failed to create image blob'));
+        try {
+            const qr = QRCode.create(text, { errorCorrectionLevel: 'M' });
+            const size = qr.modules.size;
+            const margin = 1;
+            const scale = width / (size + margin * 2);
+            const outputSize = Math.floor((size + margin * 2) * scale);
+            
+            const canvas = new OffscreenCanvas(outputSize, outputSize);
+            const ctx = canvas.getContext('2d');
+            
+            const imageData = ctx.createImageData(outputSize, outputSize);
+            const palette = [255, 255, 255, 255, 0, 0, 0, 255];
+            
+            for (let y = 0; y < outputSize; y++) {
+                for (let x = 0; x < outputSize; x++) {
+                    const srcX = Math.floor((x / scale) - margin);
+                    const srcY = Math.floor((y / scale) - margin);
+                    
+                    let colorIndex = 0;
+                    if (srcX >= 0 && srcX < size && srcY >= 0 && srcY < size) {
+                        colorIndex = qr.modules.data[srcY * size + srcX] ? 1 : 0;
                     } else {
-                        resolve(blob);
+                        colorIndex = 0;
                     }
-                }, 'image/png');
-            } catch (error) {
-                reject(error);
+                    
+                    const pixelIndex = (y * outputSize + x) * 4;
+                    imageData.data[pixelIndex] = palette[colorIndex * 4];
+                    imageData.data[pixelIndex + 1] = palette[colorIndex * 4 + 1];
+                    imageData.data[pixelIndex + 2] = palette[colorIndex * 4 + 2];
+                    imageData.data[pixelIndex + 3] = palette[colorIndex * 4 + 3];
+                }
             }
-        });
+            
+            ctx.putImageData(imageData, 0, 0);
+            
+            canvas.convertToBlob({ type: 'image/png' }).then(blob => {
+                blob.arrayBuffer().then(buffer => {
+                    const base64 = arrayBufferToBase64(buffer);
+                    resolve('data:image/png;base64,' + base64);
+                });
+            });
+        } catch (error) {
+            reject(error);
+        }
     });
 }
 
-function createCompositeCanvas(qrCanvas, topText, bottomText, imageSize, includeTopText, includeBottomText) {
+function arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+function dataURLtoBlob(dataUrl) {
+    return new Promise((resolve, reject) => {
+        try {
+            const arr = dataUrl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            resolve(new Blob([u8arr], { type: mime }));
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+async function createCompositeImage(qrBlob, topText, bottomText, imageSize, includeTopText, includeBottomText) {
     const FONT_SIZE_RATIO = 0.08;
     const padding = Math.max(8, imageSize * 0.02);
     const fontSize = Math.max(12, Math.round(imageSize * FONT_SIZE_RATIO));
@@ -62,13 +116,13 @@ function createCompositeCanvas(qrCanvas, topText, bottomText, imageSize, include
         bottomTextHeight = padding + bottomLines.length * lineHeight + padding;
     }
 
+    const qrBitmap = await createImageBitmap(qrBlob);
     const compositeCanvas = new OffscreenCanvas(imageSize, imageSize + topTextHeight + bottomTextHeight);
     const ctx = compositeCanvas.getContext('2d');
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
-
-    ctx.drawImage(qrCanvas, 0, topTextHeight);
+    ctx.drawImage(qrBitmap, 0, topTextHeight);
 
     if (includeTopText && topText) {
         ctx.fillStyle = '#000000';
@@ -98,7 +152,7 @@ function createCompositeCanvas(qrCanvas, topText, bottomText, imageSize, include
         }
     }
 
-    return compositeCanvas;
+    return compositeCanvas.convertToBlob({ type: 'image/png' });
 }
 
 function wrapTextToWidth(ctx, text, maxWidth) {
