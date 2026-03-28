@@ -351,7 +351,7 @@ UI stays responsive
         4.  Implemented task queue with callback-based result delivery.
         5.  Workers communicate via `postMessage`/`onmessage`.
 
-- [ ] **Step 29: Implement OffscreenCanvas Rendering in Worker**
+- [x] **Step 29: Implement OffscreenCanvas Rendering in Worker**
     - **Goal**: Move all canvas operations off the main thread.
     - **Tasks**:
         1.  In `qr-worker.js`, receive `{ url, width, topText, bottomText }` via message.
