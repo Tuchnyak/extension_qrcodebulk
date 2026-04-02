@@ -8,6 +8,10 @@ let isGenerating = false;
 let elements = {};
 let originalGenerateBtnText = '';
 
+// Color defaults
+const DEFAULT_BG_COLOR = '#ffffff';
+const DEFAULT_FG_COLOR = '#000000';
+
 // Small helpers to update progress on the Generate button
 function saveOriginalGenerateButtonText() {
     if (elements.generateBtn) originalGenerateBtnText = elements.generateBtn.textContent;
@@ -46,7 +50,10 @@ function initializeElements() {
         previewToggle: document.getElementById('preview-toggle'),
         previewPanel: document.getElementById('preview-panel'),
         previewCanvas: document.getElementById('preview-canvas'),
-        previewPlaceholder: document.getElementById('preview-placeholder')
+        previewPlaceholder: document.getElementById('preview-placeholder'),
+        bgColorInput: document.getElementById('bg-color-input'),
+        fgColorInput: document.getElementById('fg-color-input'),
+        resetColorsBtn: document.getElementById('reset-colors-btn')
     };
 }
 
@@ -87,6 +94,11 @@ function wireUpEventListeners() {
 
     // File name validation
     elements.fileNameInput.addEventListener('input', validateFileName);
+
+    // Color customization
+    elements.bgColorInput.addEventListener('input', handleColorChange);
+    elements.fgColorInput.addEventListener('input', handleColorChange);
+    elements.resetColorsBtn.addEventListener('click', resetColorsToDefault);
 }
 
 function handleFileUpload(event) {
@@ -98,6 +110,7 @@ function handleFileUpload(event) {
         elements.dataTextarea.value = e.target.result;
         updateCSVControls();
         updateGenerateButtonText();
+        saveTextareaContent();
     };
     reader.readAsText(file);
 
@@ -350,9 +363,18 @@ async function handleGenerate() {
 }
 
 async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText) {
+    const bgColor = elements.bgColorInput.value;
+    const fgColor = elements.fgColorInput.value;
+
     return new Promise((resolve, reject) => {
-        // Generate QR code
-        QRCode.toCanvas(lineData.url, { width: imageSize }, (error, qrCanvas) => {
+        // Generate QR code with custom colors
+        QRCode.toCanvas(lineData.url, {
+            width: imageSize,
+            color: {
+                dark: fgColor,
+                light: bgColor
+            }
+        }, (error, qrCanvas) => {
             if (error) {
                 reject(new Error('QR code generation failed: ' + error.message));
                 return;
@@ -363,7 +385,7 @@ async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBo
 
                 // Add text if requested and available
                 if ((includeTopText && lineData.topText) || (includeBottomText && lineData.bottomText)) {
-                    finalCanvas = createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText);
+                    finalCanvas = createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText, fgColor, bgColor);
                 }
 
                 // Convert to blob
@@ -381,7 +403,7 @@ async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBo
     });
 }
 
-function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText) {
+function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText, fgColor, bgColor) {
     const FONT_SIZE_RATIO = 0.08;
     const padding = Math.max(8, imageSize * 0.02);
     const fontSize = Math.max(12, Math.round(imageSize * FONT_SIZE_RATIO));
@@ -411,7 +433,7 @@ function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, in
     const ctx = compositeCanvas.getContext('2d');
 
     // Fill background
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
 
     // Draw QR code
@@ -419,7 +441,7 @@ function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, in
 
     // Draw top text
     if (includeTopText && lineData.topText) {
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = fgColor;
         ctx.font = `${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
         ctx.textBaseline = 'top';
         ctx.textAlign = 'center';
@@ -434,9 +456,9 @@ function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, in
 
     // Draw bottom text
     if (includeBottomText && lineData.bottomText) {
-    ctx.fillStyle = '#000000';
+        ctx.fillStyle = fgColor;
         ctx.font = `${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
-    ctx.textBaseline = 'top';
+        ctx.textBaseline = 'top';
         ctx.textAlign = 'center';
         
         const bottomLines = wrapTextToWidth(ctxMeasure, lineData.bottomText, imageSize - padding * 2);
@@ -617,7 +639,10 @@ function restorePreviewPanelState() {
 }
 
 function saveTextareaContent() {
-    chrome.storage.local.set({ textareaContent: elements.dataTextarea.value });
+    const content = elements.dataTextarea.value;
+    if (content) {
+        chrome.storage.local.set({ textareaContent: content });
+    }
 }
 
 function renderPreview() {
@@ -671,11 +696,20 @@ function showPreviewPlaceholder(message) {
 }
 
 async function generatePreviewQR(url, imageSize, topText, bottomText, includeTopText, includeBottomText) {
+    const bgColor = elements.bgColorInput.value;
+    const fgColor = elements.fgColorInput.value;
+
     try {
         const canvas = elements.previewCanvas;
         const ctx = canvas.getContext('2d');
 
-        const qrCanvas = await QRCode.toCanvas(url, { width: imageSize });
+        const qrCanvas = await QRCode.toCanvas(url, {
+            width: imageSize,
+            color: {
+                dark: fgColor,
+                light: bgColor
+            }
+        });
 
         canvas.width = qrCanvas.width;
         canvas.height = qrCanvas.height;
@@ -683,7 +717,7 @@ async function generatePreviewQR(url, imageSize, topText, bottomText, includeTop
         let finalCanvas = qrCanvas;
 
         if ((includeTopText && topText) || (includeBottomText && bottomText)) {
-            finalCanvas = createCompositeCanvas(qrCanvas, { topText, bottomText }, imageSize, includeTopText, includeBottomText);
+            finalCanvas = createCompositeCanvas(qrCanvas, { topText, bottomText }, imageSize, includeTopText, includeBottomText, fgColor, bgColor);
         }
 
         canvas.width = finalCanvas.width;
@@ -778,16 +812,40 @@ function handleStarClick(value) {
     }
 }
 
-// Add setupRatingBanner to DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-    initializeElements();
-    wireUpEventListeners();
-    updateCSVControls();
-    updateGenerateButtonText();
-    setupRatingBanner();
-    restorePreviewPanelState();
-    restoreTextareaContent();
-});
+// Color customization functions
+function handleColorChange() {
+    saveColors();
+    renderPreview();
+}
+
+function saveColors() {
+    const bgColor = elements.bgColorInput.value;
+    const fgColor = elements.fgColorInput.value;
+    if (bgColor !== DEFAULT_BG_COLOR || fgColor !== DEFAULT_FG_COLOR) {
+        chrome.storage.local.set({
+            qrBackgroundColor: bgColor,
+            qrForegroundColor: fgColor
+        });
+    }
+}
+
+function restoreColorSettings() {
+    chrome.storage.local.get(['qrBackgroundColor', 'qrForegroundColor'], (result) => {
+        if (result.qrBackgroundColor) {
+            elements.bgColorInput.value = result.qrBackgroundColor;
+        }
+        if (result.qrForegroundColor) {
+            elements.fgColorInput.value = result.qrForegroundColor;
+        }
+    });
+}
+
+function resetColorsToDefault() {
+    elements.bgColorInput.value = DEFAULT_BG_COLOR;
+    elements.fgColorInput.value = DEFAULT_FG_COLOR;
+    saveColors();
+    renderPreview();
+}
 
 function restoreTextareaContent() {
     chrome.storage.local.get(['textareaContent'], (result) => {
@@ -807,3 +865,14 @@ function checkAndRenderPreview() {
         }
     });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    initializeElements();
+    wireUpEventListeners();
+    updateCSVControls();
+    updateGenerateButtonText();
+    setupRatingBanner();
+    restorePreviewPanelState();
+    restoreTextareaContent();
+    restoreColorSettings();
+});
