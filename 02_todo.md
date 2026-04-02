@@ -482,3 +482,69 @@ Context: The current UI has empty white space on the right. This space can be us
 - **Performance**: Debounce `renderPreview()` calls to avoid excessive re-rendering during rapid input.
 - **Canvas Sizing**: Preview canvas should scale to fit the panel while maintaining aspect ratio.
 - **Accessibility**: Ensure the toggle button is keyboard accessible and has proper ARIA labels.
+
+---
+
+### Phase 12: QR Code Customization
+
+Goal: Add customization options for QR code appearance (colors, branded center label, custom image). Controls added under the preview in the slide-out preview panel.
+
+---
+
+- [ ] **Step 39: Color Customization**
+    - **Goal**: Allow users to customize QR code background and foreground colors.
+    - **Tasks**:
+        1. In `src/bulk.html`, add color controls in the preview panel:
+           - Background color picker (`<input type="color">`)
+           - Foreground color picker (`<input type="color">`)
+           - Reset button to restore defaults
+        2. In `src/bulk.css`, style the color pickers and reset button.
+        3. In `src/bulk.js`:
+           - Add elements to `elements` object
+           - Wire up event listeners
+           - Update `generateQRCodeBlob()` to pass `{ color: { dark, light } }` to `QRCode.toCanvas()`
+           - Update `createCompositeCanvas()` to use foreground color for text
+           - Add functions to save/load colors from `chrome.storage.local`
+           - Add reset function
+    - **Defaults**: Background `#ffffff`, Foreground `#000000`
+    - **Storage Keys**: `qrBackgroundColor`, `qrForegroundColor`
+
+- [ ] **Step 40: Branded Center Label (Pax Cultura)**
+    - **Goal**: Add a branded symbol in the center of every QR code.
+    - **Tasks**:
+        1. Create SVG for Pax Cultura symbol (circle with three dots inside — Рерих).
+        2. In `src/bulk.js`, add `drawCenterLabel()` function that:
+           - Renders SVG to temporary canvas
+           - Colors it with the selected foreground color
+           - Returns scaled canvas for overlay
+        3. Call `drawCenterLabel()` in `generateQRCodeBlob()` and `generatePreviewQR()` after QR generation.
+        4. Size: 20% of QR code width (safe zone for scanability).
+    - **Visual**: Monochrome SVG, color from foreground setting
+
+- [ ] **Step 41: Custom Center Image**
+    - **Goal**: Allow users to upload their own image to display in the center instead of Pax Cultura.
+    - **Tasks**:
+        1. In `src/bulk.html`, add upload controls in preview panel:
+           - File input for images (PNG, JPG, SVG)
+           - Upload button
+        2. In `src/bulk.js`:
+           - Add `loadCustomImage()` function using `FileReader`
+           - Save uploaded image as base64 to `chrome.storage.local` (key: `customCenterImage`)
+           - Modify center label logic: if custom image exists, draw it; otherwise draw Pax Cultura
+           - Load custom image from storage on page load
+           - Reset button returns to Pax Cultura symbol (no separate remove button)
+        3. Constrain image size to max 25% of QR code width.
+    - **Behavior**:
+        - User uploads image → image displayed in center
+        - Reset action → returns to Pax Cultura symbol
+        - Must not break QR code scanability
+
+- [ ] **Verification**
+    - **Goal**: Confirm all customization features work correctly.
+    - **Action**:
+        1. Test color pickers: change colors, verify QR updates in preview, verify generated images have correct colors.
+        2. Test reset button: verify colors return to defaults.
+        3. Test Pax Cultura symbol: verify it's present by default in center of QR.
+        4. Test custom image upload: upload PNG/JPG, verify it appears in center, verify reset returns to symbol.
+        5. Test storage persistence: refresh page, verify colors and custom image are restored.
+        6. Verify QR codes are still scannable with all customization options.
