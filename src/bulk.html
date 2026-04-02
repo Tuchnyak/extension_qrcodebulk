@@ -107,16 +107,26 @@
         <div class="customization-controls">
             <div class="color-controls">
                 <div class="color-control">
-                    <label for="bg-color-input">Background:</label>
-                    <input type="color" id="bg-color-input" value="#ffffff">
+                    <label>BG:</label>
+                    <button type="button" class="color-btn" id="bg-color-btn" style="background-color: #ffffff;"></button>
                 </div>
                 <div class="color-control">
-                    <label for="fg-color-input">Foreground:</label>
-                    <input type="color" id="fg-color-input" value="#000000">
+                    <label>FG:</label>
+                    <button type="button" class="color-btn" id="fg-color-btn" style="background-color: #000000;"></button>
                 </div>
             </div>
-            <button id="reset-colors-btn" class="reset-btn">Reset Colors</button>
+            <button id="reset-colors-btn" class="reset-btn">Reset</button>
         </div>
+    </div>
+
+    <!-- Color picker panels moved outside preview-panel for proper fixed positioning -->
+    <div class="color-picker-panel" id="bg-picker-panel" style="display: none;">
+        <canvas id="bg-picker-canvas" class="picker-canvas"></canvas>
+        <input type="text" class="hex-input" id="bg-hex-input" value="#ffffff">
+    </div>
+    <div class="color-picker-panel" id="fg-picker-panel" style="display: none;">
+        <canvas id="fg-picker-canvas" class="picker-canvas"></canvas>
+        <input type="text" class="hex-input" id="fg-hex-input" value="#000000">
     </div>
 
     <div class="rating-banner">

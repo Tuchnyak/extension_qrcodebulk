@@ -51,8 +51,14 @@ function initializeElements() {
         previewPanel: document.getElementById('preview-panel'),
         previewCanvas: document.getElementById('preview-canvas'),
         previewPlaceholder: document.getElementById('preview-placeholder'),
-        bgColorInput: document.getElementById('bg-color-input'),
-        fgColorInput: document.getElementById('fg-color-input'),
+        bgColorBtn: document.getElementById('bg-color-btn'),
+        bgHexInput: document.getElementById('bg-hex-input'),
+        bgPickerPanel: document.getElementById('bg-picker-panel'),
+        bgPickerCanvas: document.getElementById('bg-picker-canvas'),
+        fgColorBtn: document.getElementById('fg-color-btn'),
+        fgHexInput: document.getElementById('fg-hex-input'),
+        fgPickerPanel: document.getElementById('fg-picker-panel'),
+        fgPickerCanvas: document.getElementById('fg-picker-canvas'),
         resetColorsBtn: document.getElementById('reset-colors-btn')
     };
 }
@@ -96,9 +102,17 @@ function wireUpEventListeners() {
     elements.fileNameInput.addEventListener('input', validateFileName);
 
     // Color customization
-    elements.bgColorInput.addEventListener('input', handleColorChange);
-    elements.fgColorInput.addEventListener('input', handleColorChange);
+    elements.bgColorBtn.addEventListener('click', (e) => toggleColorPicker('bg', e));
+    elements.fgColorBtn.addEventListener('click', (e) => toggleColorPicker('fg', e));
+    elements.bgHexInput.addEventListener('input', (e) => handleHexInput('bg', e));
+    elements.fgHexInput.addEventListener('input', (e) => handleHexInput('fg', e));
     elements.resetColorsBtn.addEventListener('click', resetColorsToDefault);
+
+    // Close pickers on outside click
+    document.addEventListener('click', handleColorPickerOutsideClick);
+
+    // Initialize pickers after DOM
+    initColorPickers();
 }
 
 function handleFileUpload(event) {
@@ -363,8 +377,8 @@ async function handleGenerate() {
 }
 
 async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText) {
-    const bgColor = elements.bgColorInput.value;
-    const fgColor = elements.fgColorInput.value;
+    const bgColor = rgbToHex(elements.bgColorBtn.style.backgroundColor) || DEFAULT_BG_COLOR;
+    const fgColor = rgbToHex(elements.fgColorBtn.style.backgroundColor) || DEFAULT_FG_COLOR;
 
     return new Promise((resolve, reject) => {
         // Generate QR code with custom colors
@@ -696,8 +710,8 @@ function showPreviewPlaceholder(message) {
 }
 
 async function generatePreviewQR(url, imageSize, topText, bottomText, includeTopText, includeBottomText) {
-    const bgColor = elements.bgColorInput.value;
-    const fgColor = elements.fgColorInput.value;
+    const bgColor = rgbToHex(elements.bgColorBtn.style.backgroundColor) || DEFAULT_BG_COLOR;
+    const fgColor = rgbToHex(elements.fgColorBtn.style.backgroundColor) || DEFAULT_FG_COLOR;
 
     try {
         const canvas = elements.previewCanvas;
@@ -813,14 +827,145 @@ function handleStarClick(value) {
 }
 
 // Color customization functions
-function handleColorChange() {
+let activePicker = null;
+
+function initColorPickers() {
+    drawColorPicker(elements.bgPickerCanvas);
+    drawColorPicker(elements.fgPickerCanvas);
+
+    elements.bgPickerCanvas.addEventListener('click', (e) => handlePickerClick('bg', e));
+    elements.fgPickerCanvas.addEventListener('click', (e) => handlePickerClick('fg', e));
+}
+
+function drawColorPicker(canvas) {
+    const size = 180;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            const hue = (x / size) * 360;
+            const sat = 100;
+            const light = 100 - (y / size) * 100;
+            ctx.fillStyle = `hsl(${hue}, ${sat}%, ${light}%)`;
+            ctx.fillRect(x, y, 1, 1);
+        }
+    }
+}
+
+function toggleColorPicker(type, event) {
+    console.log('toggleColorPicker called:', type);
+    event.stopPropagation();
+    const panel = type === 'bg' ? elements.bgPickerPanel : elements.fgPickerPanel;
+    const btn = type === 'bg' ? elements.bgColorBtn : elements.fgColorBtn;
+    const hexInput = type === 'bg' ? elements.bgHexInput : elements.fgHexInput;
+
+    console.log('panel:', panel, 'btn:', btn);
+
+    hexInput.value = rgbToHex(btn.style.backgroundColor) || (type === 'bg' ? DEFAULT_BG_COLOR : DEFAULT_FG_COLOR);
+
+    if (activePicker === type) {
+        panel.style.display = 'none';
+        activePicker = null;
+    } else {
+        if (elements.bgPickerPanel.style.display === 'block') elements.bgPickerPanel.style.display = 'none';
+        if (elements.fgPickerPanel.style.display === 'block') elements.fgPickerPanel.style.display = 'none';
+
+        // Calculate position
+        const btnRect = btn.getBoundingClientRect();
+        const panelHeight = 240;
+        const panelWidth = 200;
+
+        let top = btnRect.bottom + 4;
+        let left = btnRect.left;
+
+        if (btnRect.bottom + panelHeight > window.innerHeight) {
+            top = btnRect.top - panelHeight - 4;
+        }
+
+        if (btnRect.left + panelWidth > window.innerWidth) {
+            left = window.innerWidth - panelWidth - 10;
+        }
+
+        if (btnRect.left < 0) {
+            left = 10;
+        }
+
+        console.log('Setting panel top:', top, 'left:', left);
+        panel.style.top = `${top}px`;
+        panel.style.left = `${left}px`;
+        panel.style.display = 'block';
+        activePicker = type;
+    }
+}
+
+function handlePickerClick(type, event) {
+    const canvas = type === 'bg' ? elements.bgPickerCanvas : elements.fgPickerCanvas;
+    const btn = type === 'bg' ? elements.bgColorBtn : elements.fgColorBtn;
+    const hexInput = type === 'bg' ? elements.bgHexInput : elements.fgHexInput;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const hue = (x / canvas.width) * 360;
+    const light = 100 - (y / canvas.height) * 100;
+    const color = `hsl(${hue}, 100%, ${light}%)`;
+
+    btn.style.backgroundColor = color;
+    hexInput.value = hslToHex(hue, 100, light);
     saveColors();
     renderPreview();
 }
 
+function handleHexInput(type, event) {
+    const hex = event.target.value;
+    const btn = type === 'bg' ? elements.bgColorBtn : elements.fgColorBtn;
+
+    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+        btn.style.backgroundColor = hex;
+        saveColors();
+        renderPreview();
+    }
+}
+
+function handleColorPickerOutsideClick(e) {
+    if (activePicker) {
+        const panel = activePicker === 'bg' ? elements.bgPickerPanel : elements.fgPickerPanel;
+        const btn = activePicker === 'bg' ? elements.bgColorBtn : elements.fgColorBtn;
+        if (!panel.contains(e.target) && e.target !== btn) {
+            panel.style.display = 'none';
+            activePicker = null;
+        }
+    }
+}
+
+function rgbToHex(rgb) {
+    if (!rgb || rgb.startsWith('#')) return rgb;
+    const result = rgb.match(/\d+/g);
+    if (!result || result.length < 3) return null;
+    const r = parseInt(result[0]).toString(16).padStart(2, '0');
+    const g = parseInt(result[1]).toString(16).padStart(2, '0');
+    const b = parseInt(result[2]).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+}
+
+function hslToHex(h, s, l) {
+    s /= 100;
+    l /= 100;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+}
+
 function saveColors() {
-    const bgColor = elements.bgColorInput.value;
-    const fgColor = elements.fgColorInput.value;
+    const bgColor = rgbToHex(elements.bgColorBtn.style.backgroundColor) || DEFAULT_BG_COLOR;
+    const fgColor = rgbToHex(elements.fgColorBtn.style.backgroundColor) || DEFAULT_FG_COLOR;
     if (bgColor !== DEFAULT_BG_COLOR || fgColor !== DEFAULT_FG_COLOR) {
         chrome.storage.local.set({
             qrBackgroundColor: bgColor,
@@ -832,17 +977,21 @@ function saveColors() {
 function restoreColorSettings() {
     chrome.storage.local.get(['qrBackgroundColor', 'qrForegroundColor'], (result) => {
         if (result.qrBackgroundColor) {
-            elements.bgColorInput.value = result.qrBackgroundColor;
+            elements.bgColorBtn.style.backgroundColor = result.qrBackgroundColor;
+            elements.bgHexInput.value = result.qrBackgroundColor;
         }
         if (result.qrForegroundColor) {
-            elements.fgColorInput.value = result.qrForegroundColor;
+            elements.fgColorBtn.style.backgroundColor = result.qrForegroundColor;
+            elements.fgHexInput.value = result.qrForegroundColor;
         }
     });
 }
 
 function resetColorsToDefault() {
-    elements.bgColorInput.value = DEFAULT_BG_COLOR;
-    elements.fgColorInput.value = DEFAULT_FG_COLOR;
+    elements.bgColorBtn.style.backgroundColor = DEFAULT_BG_COLOR;
+    elements.bgHexInput.value = DEFAULT_BG_COLOR;
+    elements.fgColorBtn.style.backgroundColor = DEFAULT_FG_COLOR;
+    elements.fgHexInput.value = DEFAULT_FG_COLOR;
     saveColors();
     renderPreview();
 }
