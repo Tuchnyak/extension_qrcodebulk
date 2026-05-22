@@ -12,6 +12,9 @@ let originalGenerateBtnText = '';
 const DEFAULT_BG_COLOR = '#ffffff';
 const DEFAULT_FG_COLOR = '#000000';
 
+// Feature flags
+const ENABLE_CENTER_LABEL = true;
+
 // Small helpers to update progress on the Generate button
 function saveOriginalGenerateButtonText() {
     if (elements.generateBtn) originalGenerateBtnText = elements.generateBtn.textContent;
