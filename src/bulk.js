@@ -512,6 +512,40 @@ function wrapTextToWidth(ctx, text, maxWidth) {
     return lines;
 }
 
+function drawCenterLabel(ctx, size, fgColor, bgColor) {
+    if (!ENABLE_CENTER_LABEL) return;
+
+    const r       = size * 0.10;
+    const cx      = size / 2;
+    const cy      = size / 2;
+    const pad     = r * 0.15;
+    const cornerR = r * 0.22;
+
+    // Rounded background in bgColor
+    ctx.fillStyle = bgColor;
+    ctx.beginPath();
+    ctx.roundRect(cx - r - pad, cy - r - pad, (r + pad) * 2, (r + pad) * 2, cornerR);
+    ctx.fill();
+
+    // Outer ring
+    const sw = r * 0.13;
+    ctx.strokeStyle = fgColor;
+    ctx.lineWidth = sw;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - sw / 2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Three dots: equilateral triangle, apex up
+    const dotR    = r * 0.24;
+    const dotDist = r * 0.47;
+    ctx.fillStyle = fgColor;
+    [[0, -1], [-0.866, 0.5], [0.866, 0.5]].forEach(([dx, dy]) => {
+        ctx.beginPath();
+        ctx.arc(cx + dx * dotDist, cy + dy * dotDist, dotR, 0, Math.PI * 2);
+        ctx.fill();
+    });
+}
+
 async function createErrorLog(errors, subDir) {
     const errorContent = errors.map(error => 
         `Line ${error.lineNumber}: ${error.line} - ${error.reason}`
