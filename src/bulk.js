@@ -898,13 +898,10 @@ function drawColorPicker(canvas) {
 }
 
 function toggleColorPicker(type, event) {
-    console.log('toggleColorPicker called:', type);
     event.stopPropagation();
     const panel = type === 'bg' ? elements.bgPickerPanel : elements.fgPickerPanel;
     const btn = type === 'bg' ? elements.bgColorBtn : elements.fgColorBtn;
     const hexInput = type === 'bg' ? elements.bgHexInput : elements.fgHexInput;
-
-    console.log('panel:', panel, 'btn:', btn);
 
     hexInput.value = rgbToHex(btn.style.backgroundColor) || (type === 'bg' ? DEFAULT_BG_COLOR : DEFAULT_FG_COLOR);
 
@@ -935,7 +932,6 @@ function toggleColorPicker(type, event) {
             left = 10;
         }
 
-        console.log('Setting panel top:', top, 'left:', left);
         panel.style.top = `${top}px`;
         panel.style.left = `${left}px`;
         panel.style.display = 'block';
