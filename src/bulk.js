@@ -400,6 +400,9 @@ async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBo
             try {
                 let finalCanvas = qrCanvas;
 
+                // Draw center label (Pax Cultura symbol)
+                drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor);
+
                 // Add text if requested and available
                 if ((includeTopText && lineData.topText) || (includeBottomText && lineData.bottomText)) {
                     finalCanvas = createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText, fgColor, bgColor);
