@@ -768,6 +768,9 @@ async function generatePreviewQR(url, imageSize, topText, bottomText, includeTop
         canvas.width = qrCanvas.width;
         canvas.height = qrCanvas.height;
 
+        // Draw center label (Pax Cultura symbol)
+        drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor);
+
         let finalCanvas = qrCanvas;
 
         if ((includeTopText && topText) || (includeBottomText && bottomText)) {
