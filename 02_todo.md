@@ -511,19 +511,12 @@ Goal: Add customization options for QR code appearance (colors, branded center l
     - **Defaults**: Background `#ffffff`, Foreground `#000000`
     - **Storage Keys**: `qrBackgroundColor`, `qrForegroundColor`
 
-- [ ] **Step 40: Branded Center Label (Pax Cultura)**
+- [x] **Step 40: Branded Center Label (Pax Cultura)** ✅ COMPLETED
     - **Goal**: Add a branded symbol in the center of every QR code.
-    - **Tasks**:
-        1. Create SVG for Pax Cultura symbol (circle with three dots inside — Рерих).
-        2. In `src/bulk.js`, add `drawCenterLabel()` function that:
-           - Renders SVG to temporary canvas
-           - Colors it with the selected foreground color
-           - Returns scaled canvas for overlay
-        3. Call `drawCenterLabel()` in `generateQRCodeBlob()` and `generatePreviewQR()` after QR generation.
-        4. Size: 20% of QR code width (safe zone for scanability).
-    - **Visual**: Monochrome SVG, color from foreground setting
+    - **Implementation**: Canvas 2D API (pure drawing, no SVG file). Classic variant: outer ring + three circles in equilateral triangle (apex up). Size: 20% of QR width diameter. Background pad uses `bgColor`, symbol uses `fgColor`. Kill switch: `const ENABLE_CENTER_LABEL = true` in `src/bulk.js`.
+    - **Spec**: `docs/superpowers/specs/2026-05-22-pax-cultura-center-label-design.md`
 
-- [ ] **Step 41: Custom Center Image**
+- [ ] ~~**Step 41: Custom Center Image**~~ *(deferred to future release)*
     - **Goal**: Allow users to upload their own image to display in the center instead of Pax Cultura.
     - **Tasks**:
         1. In `src/bulk.html`, add upload controls in preview panel:
@@ -541,12 +534,12 @@ Goal: Add customization options for QR code appearance (colors, branded center l
         - Reset action → returns to Pax Cultura symbol
         - Must not break QR code scanability
 
-- [ ] **Verification**
-    - **Goal**: Confirm all customization features work correctly.
+- [x] **Verification** ✅ COMPLETED
+    - **Goal**: Confirm color customization and Pax Cultura symbol work correctly.
     - **Action**:
         1. Test color pickers: change colors, verify QR updates in preview, verify generated images have correct colors.
         2. Test reset button: verify colors return to defaults.
-        3. Test Pax Cultura symbol: verify it's present by default in center of QR.
-        4. Test custom image upload: upload PNG/JPG, verify it appears in center, verify reset returns to symbol.
-        5. Test storage persistence: refresh page, verify colors and custom image are restored.
-        6. Verify QR codes are still scannable with all customization options.
+        3. Test Pax Cultura symbol: verify it's present in center of QR, color matches foreground, background pad matches background color.
+        4. Test storage persistence: refresh page, verify colors are restored.
+        5. Verify QR codes are still scannable.
+    - *Note: Step 41 (custom center image) deferred to future release branch.*
