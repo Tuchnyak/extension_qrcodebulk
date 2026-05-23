@@ -8,6 +8,13 @@ let isGenerating = false;
 let elements = {};
 let originalGenerateBtnText = '';
 
+// Color defaults
+const DEFAULT_BG_COLOR = '#ffffff';
+const DEFAULT_FG_COLOR = '#000000';
+
+// Feature flags
+const ENABLE_CENTER_LABEL = true;
+
 // Small helpers to update progress on the Generate button
 function saveOriginalGenerateButtonText() {
     if (elements.generateBtn) originalGenerateBtnText = elements.generateBtn.textContent;
@@ -46,7 +53,16 @@ function initializeElements() {
         previewToggle: document.getElementById('preview-toggle'),
         previewPanel: document.getElementById('preview-panel'),
         previewCanvas: document.getElementById('preview-canvas'),
-        previewPlaceholder: document.getElementById('preview-placeholder')
+        previewPlaceholder: document.getElementById('preview-placeholder'),
+        bgColorBtn: document.getElementById('bg-color-btn'),
+        bgHexInput: document.getElementById('bg-hex-input'),
+        bgPickerPanel: document.getElementById('bg-picker-panel'),
+        bgPickerCanvas: document.getElementById('bg-picker-canvas'),
+        fgColorBtn: document.getElementById('fg-color-btn'),
+        fgHexInput: document.getElementById('fg-hex-input'),
+        fgPickerPanel: document.getElementById('fg-picker-panel'),
+        fgPickerCanvas: document.getElementById('fg-picker-canvas'),
+        resetColorsBtn: document.getElementById('reset-colors-btn')
     };
 }
 
@@ -87,6 +103,19 @@ function wireUpEventListeners() {
 
     // File name validation
     elements.fileNameInput.addEventListener('input', validateFileName);
+
+    // Color customization
+    elements.bgColorBtn.addEventListener('click', (e) => toggleColorPicker('bg', e));
+    elements.fgColorBtn.addEventListener('click', (e) => toggleColorPicker('fg', e));
+    elements.bgHexInput.addEventListener('input', (e) => handleHexInput('bg', e));
+    elements.fgHexInput.addEventListener('input', (e) => handleHexInput('fg', e));
+    elements.resetColorsBtn.addEventListener('click', resetColorsToDefault);
+
+    // Close pickers on outside click
+    document.addEventListener('click', handleColorPickerOutsideClick);
+
+    // Initialize pickers after DOM
+    initColorPickers();
 }
 
 function handleFileUpload(event) {
@@ -98,6 +127,7 @@ function handleFileUpload(event) {
         elements.dataTextarea.value = e.target.result;
         updateCSVControls();
         updateGenerateButtonText();
+        saveTextareaContent();
     };
     reader.readAsText(file);
 
@@ -350,9 +380,18 @@ async function handleGenerate() {
 }
 
 async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText) {
+    const bgColor = rgbToHex(elements.bgColorBtn.style.backgroundColor) || DEFAULT_BG_COLOR;
+    const fgColor = rgbToHex(elements.fgColorBtn.style.backgroundColor) || DEFAULT_FG_COLOR;
+
     return new Promise((resolve, reject) => {
-        // Generate QR code
-        QRCode.toCanvas(lineData.url, { width: imageSize }, (error, qrCanvas) => {
+        // Generate QR code with custom colors
+        QRCode.toCanvas(lineData.url, {
+            width: imageSize,
+            color: {
+                dark: fgColor,
+                light: bgColor
+            }
+        }, (error, qrCanvas) => {
             if (error) {
                 reject(new Error('QR code generation failed: ' + error.message));
                 return;
@@ -361,9 +400,12 @@ async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBo
             try {
                 let finalCanvas = qrCanvas;
 
+                // Draw center label (Pax Cultura symbol)
+                drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor);
+
                 // Add text if requested and available
                 if ((includeTopText && lineData.topText) || (includeBottomText && lineData.bottomText)) {
-                    finalCanvas = createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText);
+                    finalCanvas = createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText, fgColor, bgColor);
                 }
 
                 // Convert to blob
@@ -381,7 +423,7 @@ async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBo
     });
 }
 
-function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText) {
+function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText, fgColor, bgColor) {
     const FONT_SIZE_RATIO = 0.08;
     const padding = Math.max(8, imageSize * 0.02);
     const fontSize = Math.max(12, Math.round(imageSize * FONT_SIZE_RATIO));
@@ -411,7 +453,7 @@ function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, in
     const ctx = compositeCanvas.getContext('2d');
 
     // Fill background
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
 
     // Draw QR code
@@ -419,7 +461,7 @@ function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, in
 
     // Draw top text
     if (includeTopText && lineData.topText) {
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = fgColor;
         ctx.font = `${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
         ctx.textBaseline = 'top';
         ctx.textAlign = 'center';
@@ -434,9 +476,9 @@ function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, in
 
     // Draw bottom text
     if (includeBottomText && lineData.bottomText) {
-    ctx.fillStyle = '#000000';
+        ctx.fillStyle = fgColor;
         ctx.font = `${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
-    ctx.textBaseline = 'top';
+        ctx.textBaseline = 'top';
         ctx.textAlign = 'center';
         
         const bottomLines = wrapTextToWidth(ctxMeasure, lineData.bottomText, imageSize - padding * 2);
@@ -471,6 +513,40 @@ function wrapTextToWidth(ctx, text, maxWidth) {
     }
     
     return lines;
+}
+
+function drawCenterLabel(ctx, size, fgColor, bgColor) {
+    if (!ENABLE_CENTER_LABEL) return;
+
+    const r       = size * 0.07; // 14% diameter — safe under QR EC level M (15% area tolerance)
+    const cx      = size / 2;
+    const cy      = size / 2;
+    const pad     = r * 0.15;
+    const cornerR = r * 0.22;
+
+    // Rounded background in bgColor
+    ctx.fillStyle = bgColor;
+    ctx.beginPath();
+    ctx.roundRect(cx - r - pad, cy - r - pad, (r + pad) * 2, (r + pad) * 2, cornerR);
+    ctx.fill();
+
+    // Outer ring
+    const sw = r * 0.13;
+    ctx.strokeStyle = fgColor;
+    ctx.lineWidth = sw;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - sw / 2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Three dots: equilateral triangle, apex up
+    const dotR    = r * 0.24;
+    const dotDist = r * 0.47;
+    ctx.fillStyle = fgColor;
+    [[0, -1], [-0.866, 0.5], [0.866, 0.5]].forEach(([dx, dy]) => {
+        ctx.beginPath();
+        ctx.arc(cx + dx * dotDist, cy + dy * dotDist, dotR, 0, Math.PI * 2);
+        ctx.fill();
+    });
 }
 
 async function createErrorLog(errors, subDir) {
@@ -617,7 +693,10 @@ function restorePreviewPanelState() {
 }
 
 function saveTextareaContent() {
-    chrome.storage.local.set({ textareaContent: elements.dataTextarea.value });
+    const content = elements.dataTextarea.value;
+    if (content) {
+        chrome.storage.local.set({ textareaContent: content });
+    }
 }
 
 function renderPreview() {
@@ -671,19 +750,31 @@ function showPreviewPlaceholder(message) {
 }
 
 async function generatePreviewQR(url, imageSize, topText, bottomText, includeTopText, includeBottomText) {
+    const bgColor = rgbToHex(elements.bgColorBtn.style.backgroundColor) || DEFAULT_BG_COLOR;
+    const fgColor = rgbToHex(elements.fgColorBtn.style.backgroundColor) || DEFAULT_FG_COLOR;
+
     try {
         const canvas = elements.previewCanvas;
         const ctx = canvas.getContext('2d');
 
-        const qrCanvas = await QRCode.toCanvas(url, { width: imageSize });
+        const qrCanvas = await QRCode.toCanvas(url, {
+            width: imageSize,
+            color: {
+                dark: fgColor,
+                light: bgColor
+            }
+        });
 
         canvas.width = qrCanvas.width;
         canvas.height = qrCanvas.height;
 
+        // Draw center label (Pax Cultura symbol)
+        drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor);
+
         let finalCanvas = qrCanvas;
 
         if ((includeTopText && topText) || (includeBottomText && bottomText)) {
-            finalCanvas = createCompositeCanvas(qrCanvas, { topText, bottomText }, imageSize, includeTopText, includeBottomText);
+            finalCanvas = createCompositeCanvas(qrCanvas, { topText, bottomText }, imageSize, includeTopText, includeBottomText, fgColor, bgColor);
         }
 
         canvas.width = finalCanvas.width;
@@ -778,16 +869,171 @@ function handleStarClick(value) {
     }
 }
 
-// Add setupRatingBanner to DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-    initializeElements();
-    wireUpEventListeners();
-    updateCSVControls();
-    updateGenerateButtonText();
-    setupRatingBanner();
-    restorePreviewPanelState();
-    restoreTextareaContent();
-});
+// Color customization functions
+let activePicker = null;
+
+function initColorPickers() {
+    drawColorPicker(elements.bgPickerCanvas);
+    drawColorPicker(elements.fgPickerCanvas);
+
+    elements.bgPickerCanvas.addEventListener('click', (e) => handlePickerClick('bg', e));
+    elements.fgPickerCanvas.addEventListener('click', (e) => handlePickerClick('fg', e));
+}
+
+function drawColorPicker(canvas) {
+    const size = 180;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            const hue = (x / size) * 360;
+            const sat = 100;
+            const light = 100 - (y / size) * 100;
+            ctx.fillStyle = `hsl(${hue}, ${sat}%, ${light}%)`;
+            ctx.fillRect(x, y, 1, 1);
+        }
+    }
+}
+
+function toggleColorPicker(type, event) {
+    event.stopPropagation();
+    const panel = type === 'bg' ? elements.bgPickerPanel : elements.fgPickerPanel;
+    const btn = type === 'bg' ? elements.bgColorBtn : elements.fgColorBtn;
+    const hexInput = type === 'bg' ? elements.bgHexInput : elements.fgHexInput;
+
+    hexInput.value = rgbToHex(btn.style.backgroundColor) || (type === 'bg' ? DEFAULT_BG_COLOR : DEFAULT_FG_COLOR);
+
+    if (activePicker === type) {
+        panel.style.display = 'none';
+        activePicker = null;
+    } else {
+        if (elements.bgPickerPanel.style.display === 'block') elements.bgPickerPanel.style.display = 'none';
+        if (elements.fgPickerPanel.style.display === 'block') elements.fgPickerPanel.style.display = 'none';
+
+        // Calculate position
+        const btnRect = btn.getBoundingClientRect();
+        const panelHeight = 240;
+        const panelWidth = 200;
+
+        let top = btnRect.bottom + 4;
+        let left = btnRect.left;
+
+        if (btnRect.bottom + panelHeight > window.innerHeight) {
+            top = btnRect.top - panelHeight - 4;
+        }
+
+        if (btnRect.left + panelWidth > window.innerWidth) {
+            left = window.innerWidth - panelWidth - 10;
+        }
+
+        if (btnRect.left < 0) {
+            left = 10;
+        }
+
+        panel.style.top = `${top}px`;
+        panel.style.left = `${left}px`;
+        panel.style.display = 'block';
+        activePicker = type;
+    }
+}
+
+function handlePickerClick(type, event) {
+    const canvas = type === 'bg' ? elements.bgPickerCanvas : elements.fgPickerCanvas;
+    const btn = type === 'bg' ? elements.bgColorBtn : elements.fgColorBtn;
+    const hexInput = type === 'bg' ? elements.bgHexInput : elements.fgHexInput;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const hue = (x / canvas.width) * 360;
+    const light = 100 - (y / canvas.height) * 100;
+    const color = `hsl(${hue}, 100%, ${light}%)`;
+
+    btn.style.backgroundColor = color;
+    hexInput.value = hslToHex(hue, 100, light);
+    saveColors();
+    renderPreview();
+}
+
+function handleHexInput(type, event) {
+    const hex = event.target.value;
+    const btn = type === 'bg' ? elements.bgColorBtn : elements.fgColorBtn;
+
+    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+        btn.style.backgroundColor = hex;
+        saveColors();
+        renderPreview();
+    }
+}
+
+function handleColorPickerOutsideClick(e) {
+    if (activePicker) {
+        const panel = activePicker === 'bg' ? elements.bgPickerPanel : elements.fgPickerPanel;
+        const btn = activePicker === 'bg' ? elements.bgColorBtn : elements.fgColorBtn;
+        if (!panel.contains(e.target) && e.target !== btn) {
+            panel.style.display = 'none';
+            activePicker = null;
+        }
+    }
+}
+
+function rgbToHex(rgb) {
+    if (!rgb || rgb.startsWith('#')) return rgb;
+    const result = rgb.match(/\d+/g);
+    if (!result || result.length < 3) return null;
+    const r = parseInt(result[0]).toString(16).padStart(2, '0');
+    const g = parseInt(result[1]).toString(16).padStart(2, '0');
+    const b = parseInt(result[2]).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+}
+
+function hslToHex(h, s, l) {
+    s /= 100;
+    l /= 100;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function saveColors() {
+    const bgColor = rgbToHex(elements.bgColorBtn.style.backgroundColor) || DEFAULT_BG_COLOR;
+    const fgColor = rgbToHex(elements.fgColorBtn.style.backgroundColor) || DEFAULT_FG_COLOR;
+    if (bgColor !== DEFAULT_BG_COLOR || fgColor !== DEFAULT_FG_COLOR) {
+        chrome.storage.local.set({
+            qrBackgroundColor: bgColor,
+            qrForegroundColor: fgColor
+        });
+    }
+}
+
+function restoreColorSettings() {
+    chrome.storage.local.get(['qrBackgroundColor', 'qrForegroundColor'], (result) => {
+        if (result.qrBackgroundColor) {
+            elements.bgColorBtn.style.backgroundColor = result.qrBackgroundColor;
+            elements.bgHexInput.value = result.qrBackgroundColor;
+        }
+        if (result.qrForegroundColor) {
+            elements.fgColorBtn.style.backgroundColor = result.qrForegroundColor;
+            elements.fgHexInput.value = result.qrForegroundColor;
+        }
+    });
+}
+
+function resetColorsToDefault() {
+    elements.bgColorBtn.style.backgroundColor = DEFAULT_BG_COLOR;
+    elements.bgHexInput.value = DEFAULT_BG_COLOR;
+    elements.fgColorBtn.style.backgroundColor = DEFAULT_FG_COLOR;
+    elements.fgHexInput.value = DEFAULT_FG_COLOR;
+    saveColors();
+    renderPreview();
+}
 
 function restoreTextareaContent() {
     chrome.storage.local.get(['textareaContent'], (result) => {
@@ -807,3 +1053,14 @@ function checkAndRenderPreview() {
         }
     });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    initializeElements();
+    wireUpEventListeners();
+    updateCSVControls();
+    updateGenerateButtonText();
+    setupRatingBanner();
+    restorePreviewPanelState();
+    restoreTextareaContent();
+    restoreColorSettings();
+});
