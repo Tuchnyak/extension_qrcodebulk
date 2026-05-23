@@ -518,7 +518,7 @@ function wrapTextToWidth(ctx, text, maxWidth) {
 function drawCenterLabel(ctx, size, fgColor, bgColor) {
     if (!ENABLE_CENTER_LABEL) return;
 
-    const r       = size * 0.10;
+    const r       = size * 0.07; // 14% diameter — safe under QR EC level M (15% area tolerance)
     const cx      = size / 2;
     const cy      = size / 2;
     const pad     = r * 0.15;
