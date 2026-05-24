@@ -29,6 +29,13 @@
     flex: 1 1 auto;
 }
 
+.header h1 .version-label {
+    font-size: 13px;
+    font-weight: 400;
+    color: #aaa;
+    vertical-align: middle;
+}
+
 .header .ext-icon {
     position: absolute;
     left: 0;
@@ -378,6 +385,18 @@ input[type="checkbox"] {
 .rating-banner .star.hover,
 .rating-banner .star.selected {
     color: #ffc107; /* Yellow stars */
+}
+
+.rating-banner .feedback-link {
+    font-size: 12px;
+    color: #666;
+    text-decoration: underline;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.rating-banner .feedback-link:hover {
+    color: #333;
 }
 
 /* Preview Toggle Button */
