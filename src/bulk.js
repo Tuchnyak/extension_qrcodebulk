@@ -62,7 +62,9 @@ function initializeElements() {
         fgHexInput: document.getElementById('fg-hex-input'),
         fgPickerPanel: document.getElementById('fg-picker-panel'),
         fgPickerCanvas: document.getElementById('fg-picker-canvas'),
-        resetColorsBtn: document.getElementById('reset-colors-btn')
+        resetColorsBtn: document.getElementById('reset-colors-btn'),
+        versionLabel: document.getElementById('version-label'),
+        feedbackLink: document.getElementById('feedback-link')
     };
 }
 
@@ -808,6 +810,14 @@ function setupRatingBanner() {
         }
     });
 
+    const feedbackLink = document.getElementById('feedback-link');
+    if (feedbackLink) {
+        feedbackLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            chrome.tabs.create({ url: GOOGLE_FORM_URL });
+        });
+    }
+
     stars.forEach(star => {
         star.addEventListener('mouseover', () => {
             const value = parseInt(star.dataset.value);
@@ -1056,6 +1066,7 @@ function checkAndRenderPreview() {
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeElements();
+    elements.versionLabel.textContent = 'v' + chrome.runtime.getManifest().version;
     wireUpEventListeners();
     updateCSVControls();
     updateGenerateButtonText();
