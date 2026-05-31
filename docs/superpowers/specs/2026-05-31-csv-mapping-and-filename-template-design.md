@@ -15,7 +15,7 @@ Current CSV parsing (`parseData`) is hardcoded for 1 or 3 columns and returns `{
 
 - Mapping section placed **above textarea** (between csv-controls and data-input)
 - Old "Include top text" / "Include bottom text" checkboxes **removed entirely** — replaced by mapping
-- On **new file upload or column count change**: mapping resets to auto-selection defaults
+- Mapping resets to auto-defaults **only on file upload**, not on manual textarea editing
 - On **extension restart** with saved textarea content: mapping restored from storage
 - `{timestamp}` removed from Stage 2 — per-file is wasteful at scale, per-batch is pointless
 
@@ -38,7 +38,7 @@ Rules:
 - Any non-empty line → valid. No more "expected 3 parts" rejection.
 - "Has header row" ON: first line becomes `headers[]`, excluded from `parsedLines`.
 - Lines without separator → `columns: [line]` (single column).
-- Ragged CSV: shorter rows padded with `''` to match the widest row.
+- Ragged CSV: shorter rows padded with `''` to match the widest row in the dataset.
 
 **New `applyMapping(parsedLine, mapping)` → `{ url, topText, bottomText }`:**
 
@@ -47,12 +47,14 @@ Rules:
 function applyMapping(parsedLine, mapping) {
     const cols = parsedLine.columns;
     return {
-        url:      mapping.qrContent !== null ? (cols[mapping.qrContent] || '') : '',
-        topText:  mapping.title     !== null ? (cols[mapping.title]     || '') : '',
-        bottomText: mapping.footer  !== null ? (cols[mapping.footer]    || '') : ''
+        url:        mapping.qrContent !== null ? (cols[mapping.qrContent] || '') : '',
+        topText:    mapping.title     !== null ? (cols[mapping.title]     || '') : '',
+        bottomText: mapping.footer    !== null ? (cols[mapping.footer]    || '') : ''
     };
 }
 ```
+
+The `|| ''` fallback handles ragged rows gracefully — out-of-range index returns `''` without crashing.
 
 A line where `url === ''` after mapping → treated as invalid (goes to error log).
 
@@ -60,6 +62,7 @@ A line where `url === ''` after mapping → treated as invalid (goes to error lo
 
 ```javascript
 let columnMapping = { qrContent: null, title: null, footer: null };
+let lastKnownColumnCount = null;  // null = uninitialized; not persisted
 ```
 
 **Auto-selection defaults (reproduce current behaviour):**
@@ -74,6 +77,7 @@ let columnMapping = { qrContent: null, title: null, footer: null };
 
 **Removed from HTML:**
 - Both `control-group.csv-options` wrappers for `#top-text-checkbox` and `#bottom-text-checkbox`
+- Corresponding entries in `initializeElements()`, `lockUI()`, `unlockUI()`, `wireUpEventListeners()`
 
 **Added to HTML — "has header row" checkbox (same control-group as Upload CSV):**
 
@@ -113,15 +117,16 @@ Select options: `— not set —` + `Column 1`, `Column 2`, ... (or header names
 ### Logic changes in bulk.js
 
 **`updateCSVControls()`** — extended:
-1. Parse textarea to detect CSV (any line with separator) and count columns.
+1. Parse textarea to detect CSV (any line with separator) and count columns (widest row).
 2. If CSV detected: show `#mapping-section`, hide old checkbox groups.
-3. If column count changed from last known: reset `columnMapping` to auto-defaults, rebuild selects.
-4. If column count unchanged: rebuild select labels only (update header names if toggled).
-5. If no CSV: hide `#mapping-section`.
+3. If column count changed from `lastKnownColumnCount` **AND** change came from file upload: reset `columnMapping` to auto-defaults, set `lastKnownColumnCount`, rebuild selects.
+4. If column count changed via manual textarea editing: update `lastKnownColumnCount`, rebuild select labels only — do NOT reset `columnMapping` (out-of-range indices are handled gracefully by `applyMapping`'s `|| ''` fallback).
+5. If column count unchanged: rebuild select labels only (update header names if "has header row" was toggled).
+6. If no CSV: hide `#mapping-section`, set `lastKnownColumnCount = null`.
 
-Track `lastKnownColumnCount` (module-level, not persisted).
+To distinguish file upload from textarea change: `handleFileUpload()` sets a flag `let pendingFileUpload = true` before calling `updateCSVControls()`, which is consumed and cleared inside.
 
-**`handleGenerate()`** — two additions:
+**`handleGenerate()`** — changes:
 ```javascript
 const { parsedLines, headers } = parseData();
 
@@ -136,9 +141,11 @@ for (let i = 0; i < parsedLines.length; i++) {
     const lineData = applyMapping(parsedLines[i], columnMapping);
     // lineData.url empty → push to errors, skip
     // otherwise: generateQRCodeBlob(lineData, imageSize, true, true)
-    //   (includeTopText/includeBottomText are now always true — mapping controls presence)
 }
 ```
+
+**Why `includeTopText = true` and `includeBottomText = true` is safe:**
+The existing code checks `(includeTopText && lineData.topText)` before creating the composite canvas, and again before allocating height inside `createCompositeCanvas()`. Since `'' ` is falsy in JS, `true && ''` evaluates to `''` (falsy) — no composite canvas is created and no height is reserved when topText/bottomText is empty. Mapping controls presence via the value itself; no additional guard needed.
 
 **`renderPreview()`** — uses `parseData()` first line + `applyMapping()` instead of inline parsing.
 
@@ -146,7 +153,7 @@ for (let i = 0; i < parsedLines.length; i++) {
 
 **`initializeElements()`** — add `hasHeaderCheckbox`, `mappingSection`, `mappingQrContent`, `mappingTitle`, `mappingFooter`.
 
-**`wireUpEventListeners()`** — add listeners for `hasHeaderCheckbox` and three mapping selects (each triggers `saveColumnMapping()` + `renderPreview()`).
+**`wireUpEventListeners()`** — add listeners for `hasHeaderCheckbox` (triggers `updateCSVControls()`) and three mapping selects (each triggers `saveColumnMapping()` + `renderPreview()`).
 
 ### Storage
 
@@ -155,7 +162,33 @@ for (let i = 0; i < parsedLines.length; i++) {
 | `hasHeaderRow` | boolean | on checkbox change |
 | `columnMapping` | `{qrContent, title, footer}` | on any select change |
 
-**`restoreColumnMapping()`** — called at DOMContentLoaded, after `restoreTextareaContent()`. Restores both keys from storage; if CSV data is present, validates that saved column indices are within range of current column count. If any index is out of range → fall back to auto-defaults for all three roles.
+### Restore flow on extension startup
+
+**Order in `DOMContentLoaded`:**
+
+```javascript
+initializeElements();
+wireUpEventListeners();
+updateCSVControls();          // runs with empty textarea, lastKnownColumnCount = null
+updateGenerateButtonText();
+setupRatingBanner();
+restorePreviewPanelState();
+restoreTextareaContent();     // restores textarea, calls updateCSVControls() internally
+                              //   → may reset mapping to auto-defaults (lastKnownColumnCount was null)
+restoreColumnMapping();       // MUST run after restoreTextareaContent
+restoreColorSettings();
+```
+
+**`restoreColumnMapping()`** logic:
+1. Read `hasHeaderRow` and `columnMapping` from storage.
+2. Restore `hasHeaderCheckbox.checked`.
+3. If `columnMapping` exists in storage:
+   - Validate all non-null indices are `< lastKnownColumnCount` (current column count).
+   - If valid: override `columnMapping` module variable, set `lastKnownColumnCount` to current column count, rebuild selects to reflect restored mapping.
+   - If invalid (columns shifted): keep auto-defaults that were already applied.
+4. If no saved `columnMapping`: keep auto-defaults.
+
+This guarantees: if user had 3-column CSV and mapping col-2/col-1/col-3, reopening the extension with the same textarea content restores that mapping exactly.
 
 ---
 
@@ -167,17 +200,30 @@ for (let i = 0; i < parsedLines.length; i++) {
 resolveTemplate(template, parsedLine, headers, count, padding, batchDate) → string
 ```
 
+Note: `columnMapping` is NOT a parameter. `{col-N}` references raw column indices, not mapped roles — the template can use any column regardless of mapping.
+
 **Supported variables:**
 
 | Variable | Resolution |
 |---|---|
-| `{col-1}`, `{col-N}` | `parsedLine.columns[N-1]` (1-based) |
-| `{col-Name}` | column by header name (only if "has header row" is on; else leave as-is) |
+| `{col-1}`, `{col-N}` | `parsedLine.columns[N-1]` (1-based numeric index) |
+| `{col-Name}` | column by header name lookup in `headers[]` |
 | `{count}` | `String(count).padStart(padding, '0')` — reuses existing padding logic |
 | `{date}` | `batchDate` formatted as `YYYYMMDD` |
-| `{date:FORMAT}` | `batchDate` with tokens YYYY, MM, DD replaced |
+| `{date:FORMAT}` | `batchDate` with tokens YYYY, MM, DD replaced (regex `/YYYY/g`, `/MM/g`, `/DD/g`) |
 
-Rules:
+**Disambiguation: `{col-X}` vs `{col-Name}`:**
+- If the part after `col-` consists entirely of digits → treat as 1-based numeric index.
+- Otherwise → treat as header name (lookup in `headers[]`; if "has header row" is off, leave as-is).
+- Edge case: a header literally named `"1"` cannot be accessed by name via `{col-1}` — it will be treated as index 1. Acceptable limitation; document in UI tooltip if needed.
+
+**Date token replacement:**
+Use global regex to handle repeated tokens correctly:
+```javascript
+format.replace(/YYYY/g, year).replace(/MM/g, month).replace(/DD/g, day)
+```
+
+**Rules:**
 - Unknown variable → leave as-is, no error.
 - `{col-Name}` with headers off → leave as-is.
 - After resolution: sanitize `/ \ : * ? " < > |` → `_`.
@@ -207,7 +253,7 @@ const template = elements.filenameTemplateInput.value.trim();
 
 // Per-file:
 const fileName = template
-    ? resolveTemplate(template, parsedLines[i], columnMapping, headers, i + 1, padding, batchDate)
+    ? resolveTemplate(template, parsedLines[i], headers, i + 1, padding, batchDate)
     : `${baseName}_${fileNumber}`;  // existing logic, unchanged
 ```
 
