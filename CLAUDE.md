@@ -4,6 +4,8 @@
 
 This is a Chrome extension (Manifest V3) for bulk-generating QR codes from URLs or CSV data. It operates in a dedicated browser tab with a rich UI for managing input, settings, and generation.
 
+**Chrome Web Store:** https://chromewebstore.google.com/detail/bulk-qr-code-generator/nkpcheohehognkoamimhhjpgclhhleap
+
 **Key Dependencies:**
 - `qrcode` - QR code generation
 - `jszip` - ZIP archive creation
