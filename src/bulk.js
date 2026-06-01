@@ -157,10 +157,14 @@ function handleFileUpload(event) {
 
 function updateCSVControls() {
     const separator = elements.separatorInput.value;
-    const hasCSVData = elements.dataTextarea.value.split('\n').some(
-        line => line.trim() && separator && line.includes(separator)
-    );
+    const csvLines = elements.dataTextarea.value.split('\n')
+        .filter(line => line.trim() && separator && line.includes(separator));
+    const hasCSVData = csvLines.length > 0;
     elements.mappingSection.style.display = hasCSVData ? '' : 'none';
+    if (hasCSVData && columnMapping.qrContent === null) {
+        const colCount = csvLines[0].split(separator).length;
+        applyAutoDefaults(colCount);
+    }
 }
 
 function updateGenerateButtonText() {
