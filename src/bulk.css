@@ -609,13 +609,71 @@ input[type="checkbox"] {
     .preview-panel {
         width: 100%;
     }
-    
+
     .preview-canvas {
         max-width: calc(100% - 20px);
     }
-    
+
     .preview-toggle {
         padding: 8px 6px;
         font-size: 12px;
     }
+}
+
+/* Has-header checkbox label */
+.has-header-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: 4px;
+}
+
+/* Column mapping section */
+.mapping-section {
+    margin-bottom: 25px;
+    padding: 15px 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.mapping-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.mapping-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 150px;
+}
+
+.mapping-field label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+}
+
+.mapping-field select {
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 14px;
+    background-color: white;
+}
+
+.required {
+    color: #cc0000;
+}
+
+.mapping-hint {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: #cc0000;
 }
