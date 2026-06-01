@@ -146,6 +146,14 @@ function wireUpEventListeners() {
         renderPreview();
     });
 
+    // Has-header checkbox — rebuild mapping and preview
+    elements.hasHeaderCheckbox.addEventListener('change', () => {
+        saveHasHeaderRow();
+        updateCSVControls();
+        updateGenerateButtonText();
+        renderPreview();
+    });
+
     // Preview toggle
     elements.previewToggle.addEventListener('click', togglePreview);
 
@@ -767,6 +775,10 @@ function saveTextareaContent() {
     if (content) {
         chrome.storage.local.set({ textareaContent: content });
     }
+}
+
+function saveHasHeaderRow() {
+    chrome.storage.local.set({ hasHeaderRow: elements.hasHeaderCheckbox.checked });
 }
 
 function renderPreview() {
