@@ -4,6 +4,11 @@ import JSZip from 'jszip';
 // Global state
 let isGenerating = false;
 
+// Column mapping state
+let columnMapping = { qrContent: null, title: null, footer: null };
+let lastKnownColumnCount = null;
+let pendingFileUpload = false;
+
 // DOM elements
 let elements = {};
 let originalGenerateBtnText = '';
@@ -35,13 +40,30 @@ function nextTick() {
     return new Promise(resolve => setTimeout(resolve, 0));
 }
 
+function applyMapping(parsedLine, mapping) {
+    const cols = parsedLine.columns;
+    return {
+        url:        mapping.qrContent !== null ? (cols[mapping.qrContent] || '') : '',
+        topText:    mapping.title     !== null ? (cols[mapping.title]     || '') : '',
+        bottomText: mapping.footer    !== null ? (cols[mapping.footer]    || '') : ''
+    };
+}
 
+function applyAutoDefaults(colCount) {
+    columnMapping = colCount >= 3
+        ? { qrContent: 1, title: 0, footer: 2 }
+        : { qrContent: 0, title: null, footer: null };
+}
 
 function initializeElements() {
     elements = {
         separatorInput: document.getElementById('separator-input'),
-        topTextCheckbox: document.getElementById('top-text-checkbox'),
-        bottomTextCheckbox: document.getElementById('bottom-text-checkbox'),
+        hasHeaderCheckbox: document.getElementById('has-header-checkbox'),
+        mappingSection: document.getElementById('mapping-section'),
+        mappingQrContent: document.getElementById('mapping-qr-content'),
+        mappingTitle: document.getElementById('mapping-title'),
+        mappingFooter: document.getElementById('mapping-footer'),
+        mappingHint: document.getElementById('mapping-hint'),
         uploadCsvBtn: document.getElementById('upload-csv-btn'),
         csvFileInput: document.getElementById('csv-file-input'),
         dataTextarea: document.getElementById('data-textarea'),
@@ -93,10 +115,6 @@ function wireUpEventListeners() {
     // Preview toggle
     elements.previewToggle.addEventListener('click', togglePreview);
 
-    // Top/bottom text checkboxes - update preview
-    elements.topTextCheckbox.addEventListener('change', renderPreview);
-    elements.bottomTextCheckbox.addEventListener('change', renderPreview);
-
     // Image size - update preview
     elements.imageSizeInput.addEventListener('change', renderPreview);
 
@@ -138,38 +156,17 @@ function handleFileUpload(event) {
 }
 
 function updateCSVControls() {
-    const textareaContent = elements.dataTextarea.value;
     const separator = elements.separatorInput.value;
-    
-    // Check if any line contains the separator
-    const hasCSVData = textareaContent.split('\n').some(line => 
-        line.trim() && separator && line.includes(separator)
+    const hasCSVData = elements.dataTextarea.value.split('\n').some(
+        line => line.trim() && separator && line.includes(separator)
     );
-
-    // Get the parent control groups for the checkboxes
-    const topTextControlGroup = elements.topTextCheckbox.closest('.control-group');
-    const bottomTextControlGroup = elements.bottomTextCheckbox.closest('.control-group');
-
-    // Apply display logic only to the checkbox control groups
-    if (topTextControlGroup) {
-        topTextControlGroup.style.display = hasCSVData ? '' : 'none';
-    }
-    if (bottomTextControlGroup) {
-        bottomTextControlGroup.style.display = hasCSVData ? '' : 'none';
-    }
-
-    // The separator input's control group is intentionally not modified here,
-    // ensuring it remains always visible.
+    elements.mappingSection.style.display = hasCSVData ? '' : 'none';
 }
 
 function updateGenerateButtonText() {
-    const lineCount = elements.dataTextarea.value
-        .split('\n')
-        .filter(line => line.trim().length > 0)
-        .length;
-
-    if (lineCount > 0) {
-        elements.generateBtn.textContent = `Generate QR Codes (${lineCount} files)`;
+    const { parsedLines } = parseData();
+    if (parsedLines.length > 0) {
+        elements.generateBtn.textContent = `Generate QR Codes (${parsedLines.length} files)`;
     } else {
         elements.generateBtn.textContent = 'Generate QR Codes';
     }
@@ -191,57 +188,68 @@ function validateFileName() {
 function parseData() {
     const textareaContent = elements.dataTextarea.value.trim();
     const separator = elements.separatorInput.value;
-    
-    if (!textareaContent) {
-        return { validLines: [], invalidLines: [] };
-    }
+    const hasHeader = elements.hasHeaderCheckbox ? elements.hasHeaderCheckbox.checked : false;
 
-    const lines = textareaContent.split('\n')
+    if (!textareaContent) return { parsedLines: [], headers: null };
+
+    const rawLines = textareaContent.split('\n')
         .map(line => line.trim())
         .filter(line => line.length > 0);
 
-    const validLines = [];
-    const invalidLines = [];
+    if (rawLines.length === 0) return { parsedLines: [], headers: null };
 
-    lines.forEach((line, index) => {
-        if (line.includes(separator)) {
-            // CSV format: top_text;URL;bottom_text
-            const parts = line.split(separator).map(part => part.trim());
-            if (parts.length === 3) {
-                validLines.push({
-                    topText: parts[0],
-                    url: parts[1],
-                    bottomText: parts[2],
-                    originalLine: line,
-                    lineNumber: index + 1
-                });
-            } else {
-                invalidLines.push({
-                    line: line,
-                    lineNumber: index + 1,
-                    reason: `Expected 3 parts separated by '${separator}', got ${parts.length}`
-                });
-            }
-        } else {
-            // Simple URL format
-            validLines.push({
-                topText: '',
-                url: line,
-                bottomText: '',
-                originalLine: line,
-                lineNumber: index + 1
-            });
-        }
+    let headers = null;
+    let dataLines = rawLines;
+    if (hasHeader && rawLines.length > 0) {
+        headers = rawLines[0].split(separator).map(h => h.trim());
+        dataLines = rawLines.slice(1);
+    }
+
+    // Split into columns, track max column count for padding
+    let maxCols = 1;
+    const split = dataLines.map((line, idx) => {
+        const parts = separator && line.includes(separator)
+            ? line.split(separator).map(p => p.trim())
+            : [line];
+        if (parts.length > maxCols) maxCols = parts.length;
+        return { parts, line, idx };
     });
 
-    return { validLines, invalidLines };
+    const parsedLines = split.map(({ parts, line, idx }) => ({
+        columns: parts.concat(Array(Math.max(0, maxCols - parts.length)).fill('')),
+        originalLine: line,
+        lineNumber: (hasHeader ? 2 : 1) + idx
+    }));
+
+    return { parsedLines, headers };
 }
 
 async function handleGenerate() {
     if (isGenerating) return;
 
-    const { validLines, invalidLines } = parseData();
-    
+    const { parsedLines, headers } = parseData();
+
+    // When mapping UI is visible and QR content role is not assigned, block generation.
+    // When mapping UI is hidden (plain URL mode), fall back to col-0 silently.
+    const mappingActive = elements.mappingSection.style.display !== 'none';
+    if (mappingActive && columnMapping.qrContent === null) {
+        showStatus('Select a column for QR content to generate.', 'error');
+        return;
+    }
+    const effectiveMapping = mappingActive
+        ? columnMapping
+        : { qrContent: 0, title: null, footer: null };
+
+    const mappedLines = parsedLines.map(pl => ({
+        ...applyMapping(pl, effectiveMapping),
+        originalLine: pl.originalLine,
+        lineNumber: pl.lineNumber
+    }));
+    const validLines = mappedLines.filter(l => l.url.trim() !== '');
+    const invalidLines = mappedLines
+        .filter(l => l.url.trim() === '')
+        .map(l => ({ line: l.originalLine, lineNumber: l.lineNumber, reason: 'QR content column is empty' }));
+
     if (validLines.length === 0) {
         showStatus('No valid data to process. Please enter URLs or CSV data.', 'error');
         return;
@@ -259,8 +267,6 @@ async function handleGenerate() {
         const timestamp = new Date();
         const customFileName = elements.fileNameInput.value || 'qr_code';
         const imageSize = parseInt(elements.imageSizeInput.value) || 512;
-        const includeTopText = elements.topTextCheckbox.checked;
-        const includeBottomText = elements.bottomTextCheckbox.checked;
 
         const timestampStr = formatTimestamp(timestamp);
         const baseName = `${timestampStr}_${customFileName}`;
@@ -278,7 +284,7 @@ async function handleGenerate() {
                 const fileNumber = String(i + 1).padStart(padding, '0');
                 const fileName = `${baseName}_${fileNumber}.png`;
                 try {
-                    const blob = await generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText);
+                    const blob = await generateQRCodeBlob(lineData, imageSize, true, true);
                     zip.file(fileName, blob);
                     successCount++;
                     // update progress and yield briefly to allow UI update on large batches
@@ -327,7 +333,7 @@ async function handleGenerate() {
                 const fileNumber = String(i + 1).padStart(padding, '0');
                 const fileName = `${baseName}_${fileNumber}.png`;
                 try {
-                    const blob = await generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText);
+                    const blob = await generateQRCodeBlob(lineData, imageSize, true, true);
                     const url = URL.createObjectURL(blob);
                     lastDownloadId = await new Promise((resolve, reject) => {
                         chrome.downloads.download({
@@ -600,14 +606,12 @@ function lockUI() {
     // Disable all form controls
     const controls = [
         elements.separatorInput,
-        elements.topTextCheckbox,
-        elements.bottomTextCheckbox,
         elements.uploadCsvBtn,
         elements.dataTextarea,
         elements.imageSizeInput,
         elements.fileNameInput
     ];
-    
+
     controls.forEach(control => {
         if (control) control.disabled = true;
     });
@@ -620,20 +624,15 @@ function unlockUI() {
     // Re-enable all form controls
     const controls = [
         elements.separatorInput,
-        elements.topTextCheckbox,
-        elements.bottomTextCheckbox,
         elements.uploadCsvBtn,
         elements.dataTextarea,
         elements.imageSizeInput,
         elements.fileNameInput
     ];
-    
+
     controls.forEach(control => {
         if (control) control.disabled = false;
     });
-    
-    // Update CSV controls state
-    updateCSVControls();
 }
 
 function showStatus(message, type = 'info', lastDownloadId = null) {
@@ -702,47 +701,28 @@ function saveTextareaContent() {
 }
 
 function renderPreview() {
-    const textareaContent = elements.dataTextarea.value.trim();
-    const separator = elements.separatorInput.value;
-    const includeTopText = elements.topTextCheckbox.checked;
-    const includeBottomText = elements.bottomTextCheckbox.checked;
     const imageSize = parseInt(elements.imageSizeInput.value) || 512;
+    const { parsedLines } = parseData();
 
-    if (!textareaContent) {
+    if (parsedLines.length === 0) {
         showPreviewPlaceholder('Enter a URL or CSV data to see preview');
         return;
     }
 
-    const firstLine = textareaContent.split('\n')[0].trim();
-    if (!firstLine) {
-        showPreviewPlaceholder('Enter a URL or CSV data to see preview');
+    // Same effectiveMapping logic as handleGenerate: plain URL mode falls back to col-0
+    const mappingActive = elements.mappingSection.style.display !== 'none';
+    const effectiveMapping = mappingActive
+        ? columnMapping
+        : { qrContent: 0, title: null, footer: null };
+
+    const lineData = applyMapping(parsedLines[0], effectiveMapping);
+
+    if (!lineData.url) {
+        showPreviewPlaceholder('No valid URL — check column mapping for QR content');
         return;
     }
 
-    let topText = '';
-    let url = '';
-    let bottomText = '';
-
-    if (firstLine.includes(separator)) {
-        const parts = firstLine.split(separator).map(part => part.trim());
-        if (parts.length === 3) {
-            topText = parts[0];
-            url = parts[1];
-            bottomText = parts[2];
-        } else {
-            showPreviewPlaceholder('Invalid CSV format. Expected: text;URL;text');
-            return;
-        }
-    } else {
-        url = firstLine;
-    }
-
-    if (!url) {
-        showPreviewPlaceholder('No valid URL found');
-        return;
-    }
-
-    generatePreviewQR(url, imageSize, topText, bottomText, includeTopText, includeBottomText);
+    generatePreviewQR(lineData.url, imageSize, lineData.topText, lineData.bottomText, true, true);
 }
 
 function showPreviewPlaceholder(message) {
