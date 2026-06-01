@@ -136,6 +136,7 @@ function wireUpEventListeners() {
     elements.dataTextarea.addEventListener('input', () => {
         updateCSVControls();
         updateGenerateButtonText();
+        updateGenerateBtn();
         renderPreview();
         saveTextareaContent();
     });
@@ -152,6 +153,16 @@ function wireUpEventListeners() {
         updateCSVControls();
         updateGenerateButtonText();
         renderPreview();
+    });
+
+    // Mapping selects
+    [elements.mappingQrContent, elements.mappingTitle, elements.mappingFooter].forEach(sel => {
+        sel.addEventListener('change', () => {
+            readMappingFromSelects();
+            saveColumnMapping();
+            updateGenerateBtn();
+            renderPreview();
+        });
     });
 
     // Preview toggle
@@ -211,6 +222,7 @@ function updateCSVControls() {
     if (!hasCSVData) {
         elements.mappingSection.style.display = 'none';
         lastKnownColumnCount = null;
+        updateGenerateBtn();
         return;
     }
 
@@ -237,6 +249,7 @@ function updateCSVControls() {
     const headers = hasHeader ? parseHeadersFromTextarea() : null;
     buildMappingSelects(maxCols, headers);
     elements.mappingSection.style.display = '';
+    updateGenerateBtn();
 }
 
 function updateGenerateButtonText() {
@@ -685,7 +698,11 @@ function lockUI() {
         elements.uploadCsvBtn,
         elements.dataTextarea,
         elements.imageSizeInput,
-        elements.fileNameInput
+        elements.fileNameInput,
+        elements.hasHeaderCheckbox,
+        elements.mappingQrContent,
+        elements.mappingTitle,
+        elements.mappingFooter,
     ];
 
     controls.forEach(control => {
@@ -703,7 +720,11 @@ function unlockUI() {
         elements.uploadCsvBtn,
         elements.dataTextarea,
         elements.imageSizeInput,
-        elements.fileNameInput
+        elements.fileNameInput,
+        elements.hasHeaderCheckbox,
+        elements.mappingQrContent,
+        elements.mappingTitle,
+        elements.mappingFooter,
     ];
 
     controls.forEach(control => {
@@ -779,6 +800,31 @@ function saveTextareaContent() {
 
 function saveHasHeaderRow() {
     chrome.storage.local.set({ hasHeaderRow: elements.hasHeaderCheckbox.checked });
+}
+
+function readMappingFromSelects() {
+    function parseVal(el) {
+        return el.value === '' ? null : parseInt(el.value, 10);
+    }
+    columnMapping = {
+        qrContent: parseVal(elements.mappingQrContent),
+        title:     parseVal(elements.mappingTitle),
+        footer:    parseVal(elements.mappingFooter)
+    };
+}
+
+function saveColumnMapping() {
+    chrome.storage.local.set({ columnMapping });
+}
+
+function updateGenerateBtn() {
+    const { parsedLines } = parseData();
+    const csvVisible = elements.mappingSection.style.display !== 'none';
+    const needsMapping = csvVisible && parsedLines.length > 0;
+    const missingQR = needsMapping && columnMapping.qrContent === null;
+
+    elements.generateBtn.disabled = missingQR;
+    elements.mappingHint.style.display = missingQR ? '' : 'none';
 }
 
 function renderPreview() {
