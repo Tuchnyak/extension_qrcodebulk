@@ -55,6 +55,40 @@ function applyAutoDefaults(colCount) {
         : { qrContent: 0, title: null, footer: null };
 }
 
+function parseHeadersFromTextarea() {
+    const separator = elements.separatorInput.value;
+    const firstLine = elements.dataTextarea.value.split('\n').find(l => l.trim());
+    if (!firstLine || !firstLine.includes(separator)) return null;
+    return firstLine.split(separator).map(h => h.trim());
+}
+
+function buildMappingSelects(colCount, headers) {
+    const roles = [
+        { el: elements.mappingQrContent, key: 'qrContent' },
+        { el: elements.mappingTitle,     key: 'title' },
+        { el: elements.mappingFooter,    key: 'footer' }
+    ];
+
+    roles.forEach(({ el, key }) => {
+        el.innerHTML = '';
+
+        const notSet = document.createElement('option');
+        notSet.value = '';
+        notSet.textContent = '— not set —';
+        el.appendChild(notSet);
+
+        for (let i = 0; i < colCount; i++) {
+            const opt = document.createElement('option');
+            opt.value = String(i);
+            opt.textContent = (headers && headers[i]) ? headers[i] : `Column ${i + 1}`;
+            el.appendChild(opt);
+        }
+
+        const current = columnMapping[key];
+        el.value = current !== null ? String(current) : '';
+    });
+}
+
 function initializeElements() {
     elements = {
         separatorInput: document.getElementById('separator-input'),
@@ -142,6 +176,7 @@ function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    pendingFileUpload = true;
     const reader = new FileReader();
     reader.onload = (e) => {
         elements.dataTextarea.value = e.target.result;
@@ -157,14 +192,43 @@ function handleFileUpload(event) {
 
 function updateCSVControls() {
     const separator = elements.separatorInput.value;
-    const csvLines = elements.dataTextarea.value.split('\n')
-        .filter(line => line.trim() && separator && line.includes(separator));
-    const hasCSVData = csvLines.length > 0;
-    elements.mappingSection.style.display = hasCSVData ? '' : 'none';
-    if (hasCSVData && columnMapping.qrContent === null) {
-        const colCount = csvLines[0].split(separator).length;
-        applyAutoDefaults(colCount);
+    const textareaContent = elements.dataTextarea.value;
+    const hasHeader = elements.hasHeaderCheckbox ? elements.hasHeaderCheckbox.checked : false;
+
+    // Detect whether any data line (after optional header) contains the separator
+    const allLines = textareaContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const dataLines = hasHeader && allLines.length > 0 ? allLines.slice(1) : allLines;
+    const hasCSVData = dataLines.some(line => separator && line.includes(separator));
+
+    if (!hasCSVData) {
+        elements.mappingSection.style.display = 'none';
+        lastKnownColumnCount = null;
+        return;
     }
+
+    // Find max column count across all data lines
+    let maxCols = 1;
+    dataLines.forEach(line => {
+        if (line.includes(separator)) {
+            const count = line.split(separator).length;
+            if (count > maxCols) maxCols = count;
+        }
+    });
+
+    const isFileUpload = pendingFileUpload;
+    const isFirstLoad = lastKnownColumnCount === null;
+    pendingFileUpload = false;
+    lastKnownColumnCount = maxCols;
+
+    // Reset mapping to auto-defaults on file upload or first detection
+    if (isFileUpload || isFirstLoad) {
+        applyAutoDefaults(maxCols);
+    }
+
+    // Build selects using header names if available
+    const headers = hasHeader ? parseHeadersFromTextarea() : null;
+    buildMappingSelects(maxCols, headers);
+    elements.mappingSection.style.display = '';
 }
 
 function updateGenerateButtonText() {
@@ -637,6 +701,7 @@ function unlockUI() {
     controls.forEach(control => {
         if (control) control.disabled = false;
     });
+    updateCSVControls();
 }
 
 function showStatus(message, type = 'info', lastDownloadId = null) {
