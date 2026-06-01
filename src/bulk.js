@@ -1163,6 +1163,37 @@ function restoreTextareaContent() {
     });
 }
 
+function restoreColumnMapping() {
+    chrome.storage.local.get(['hasHeaderRow', 'columnMapping'], (result) => {
+        // Restore has-header checkbox
+        if (result.hasHeaderRow) {
+            elements.hasHeaderCheckbox.checked = true;
+        }
+
+        // Get current column count from already-restored textarea content
+        const { parsedLines } = parseData();
+        const currentColCount = parsedLines.length > 0 ? parsedLines[0].columns.length : 0;
+
+        if (result.columnMapping && currentColCount > 0) {
+            const saved = result.columnMapping;
+            // Validate all non-null indices are in range
+            const indices = [saved.qrContent, saved.title, saved.footer].filter(v => v !== null);
+            const isValid = indices.every(v => v < currentColCount);
+
+            if (isValid) {
+                columnMapping = saved;
+                lastKnownColumnCount = currentColCount;
+                // Rebuild selects to reflect restored mapping
+                const headers = elements.hasHeaderCheckbox.checked ? parseHeadersFromTextarea() : null;
+                buildMappingSelects(currentColCount, headers);
+                elements.mappingSection.style.display = '';
+            }
+        }
+
+        updateGenerateBtn();
+    });
+}
+
 function checkAndRenderPreview() {
     chrome.storage.local.get(['previewPanelExpanded'], (result) => {
         if (result.previewPanelExpanded) {
@@ -1180,5 +1211,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupRatingBanner();
     restorePreviewPanelState();
     restoreTextareaContent();
+    restoreColumnMapping();      // MUST be after restoreTextareaContent
     restoreColorSettings();
 });
