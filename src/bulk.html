@@ -29,19 +29,35 @@
             <div class="control-group">
                 <button id="upload-csv-btn">Upload CSV</button>
                 <input type="file" id="csv-file-input" accept=".csv,.txt" style="display: none;">
+                <label class="has-header-label">
+                    <input type="checkbox" id="has-header-checkbox"> First row is headers
+                </label>
             </div>
             <div class="control-group csv-options">
                 <label for="separator-input">Separator:</label>
                 <input type="text" id="separator-input" value=";" maxlength="1">
             </div>
-            <div class="control-group csv-options">
-                <label for="top-text-checkbox">Include top text</label>
-                <input type="checkbox" id="top-text-checkbox" checked>
+        </div>
+
+        <!-- Column Mapping -->
+        <div id="mapping-section" class="mapping-section" style="display: none;">
+            <div class="mapping-row">
+                <div class="mapping-field">
+                    <label for="mapping-qr-content">QR content <span class="required">*</span></label>
+                    <select id="mapping-qr-content"></select>
+                </div>
+                <div class="mapping-field">
+                    <label for="mapping-title">Title</label>
+                    <select id="mapping-title"></select>
+                </div>
+                <div class="mapping-field">
+                    <label for="mapping-footer">Footer</label>
+                    <select id="mapping-footer"></select>
+                </div>
             </div>
-            <div class="control-group csv-options">
-                <label for="bottom-text-checkbox">Include bottom text</label>
-                <input type="checkbox" id="bottom-text-checkbox" checked>
-            </div>
+            <p id="mapping-hint" class="mapping-hint" style="display: none;">
+                Select a column for QR content to enable generation.
+            </p>
         </div>
 
         <!-- Data Input -->
