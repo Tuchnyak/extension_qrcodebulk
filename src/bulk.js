@@ -183,7 +183,6 @@ function initializeElements() {
         dataTextarea: document.getElementById('data-textarea'),
         generateBtn: document.getElementById('generate-btn'),
         imageSizeInput: document.getElementById('image-size-input'),
-        fileNameInput: document.getElementById('file-name-input'),
         zipCheckbox: document.getElementById('zip-checkbox'),
         statusArea: document.getElementById('status-area'),
         previewToggle: document.getElementById('preview-toggle'),
@@ -255,9 +254,6 @@ function wireUpEventListeners() {
 
     // Generate button
     elements.generateBtn.addEventListener('click', handleGenerate);
-
-    // File name validation
-    elements.fileNameInput.addEventListener('input', validateFileName);
 
     elements.filenameTemplateInput.addEventListener('input', () => {
         saveFilenameTemplate();
@@ -349,18 +345,6 @@ function updateGenerateButtonText() {
     }
 }
 
-function validateFileName() {
-    // Use the fileName input value and a safe regex (escape hyphen)
-    if (!elements.fileNameInput) return;
-    const fileName = elements.fileNameInput.value;
-    const validPattern = /^[A-Za-z0-9_\-]+$/;
-
-    if (fileName && !validPattern.test(fileName)) {
-        elements.fileNameInput.setCustomValidity('File name can only contain letters, numbers, hyphens, and underscores');
-    } else {
-        elements.fileNameInput.setCustomValidity('');
-    }
-}
 
 function parseData() {
     const textareaContent = elements.dataTextarea.value.trim();
@@ -443,11 +427,10 @@ async function handleGenerate() {
 
     try {
         const timestamp = new Date();
-        const customFileName = elements.fileNameInput.value || 'qr_code';
         const imageSize = parseInt(elements.imageSizeInput.value) || 512;
 
         const timestampStr = formatTimestamp(timestamp);
-        const baseName = `${timestampStr}_${customFileName}`;
+        const baseName = timestampStr;
         const subDir = `001_bulk_qr_codes/${baseName}`;
 
         const padding = Math.max(2, Math.ceil(Math.log10(validLines.length + 1)));
@@ -795,7 +778,6 @@ function lockUI() {
         elements.uploadCsvBtn,
         elements.dataTextarea,
         elements.imageSizeInput,
-        elements.fileNameInput,
         elements.hasHeaderCheckbox,
         elements.mappingQrContent,
         elements.mappingTitle,
@@ -818,7 +800,6 @@ function unlockUI() {
         elements.uploadCsvBtn,
         elements.dataTextarea,
         elements.imageSizeInput,
-        elements.fileNameInput,
         elements.hasHeaderCheckbox,
         elements.mappingQrContent,
         elements.mappingTitle,
