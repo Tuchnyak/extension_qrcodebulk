@@ -1291,6 +1291,15 @@ function restoreColumnMapping() {
     });
 }
 
+function restoreFilenameTemplate() {
+    chrome.storage.local.get(['filenameTemplate'], (result) => {
+        if (result.filenameTemplate) {
+            elements.filenameTemplateInput.value = result.filenameTemplate;
+            updateTemplatePreview();
+        }
+    });
+}
+
 function checkAndRenderPreview() {
     chrome.storage.local.get(['previewPanelExpanded'], (result) => {
         if (result.previewPanelExpanded) {
@@ -1309,5 +1318,6 @@ document.addEventListener('DOMContentLoaded', () => {
     restorePreviewPanelState();
     restoreTextareaContent();
     restoreColumnMapping();      // MUST be after restoreTextareaContent
+    restoreFilenameTemplate();
     restoreColorSettings();
 });
