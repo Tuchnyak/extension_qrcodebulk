@@ -418,7 +418,8 @@ async function handleGenerate() {
     const mappedLines = parsedLines.map(pl => ({
         ...applyMapping(pl, effectiveMapping),
         originalLine: pl.originalLine,
-        lineNumber: pl.lineNumber
+        lineNumber: pl.lineNumber,
+        parsedLine: pl
     }));
     const validLines = mappedLines.filter(l => l.url.trim() !== '');
     const invalidLines = mappedLines
@@ -448,6 +449,8 @@ async function handleGenerate() {
         const subDir = `001_bulk_qr_codes/${baseName}`;
 
         const padding = Math.max(2, Math.ceil(Math.log10(validLines.length + 1)));
+        const template = elements.filenameTemplateInput.value.trim();
+        const usedFileNames = new Set();
         let successCount = 0;
         const errors = [];
 
@@ -457,7 +460,10 @@ async function handleGenerate() {
             for (let i = 0; i < validLines.length; i++) {
                 const lineData = validLines[i];
                 const fileNumber = String(i + 1).padStart(padding, '0');
-                const fileName = `${baseName}_${fileNumber}.png`;
+                const rawName = template
+                    ? resolveTemplate(template, lineData.parsedLine, headers, i + 1, padding, timestamp)
+                    : `${baseName}_${fileNumber}`;
+                const fileName = getUniqueFileName(rawName, usedFileNames) + '.png';
                 try {
                     const blob = await generateQRCodeBlob(lineData, imageSize, true, true);
                     zip.file(fileName, blob);
@@ -506,7 +512,10 @@ async function handleGenerate() {
             for (let i = 0; i < validLines.length; i++) {
                 const lineData = validLines[i];
                 const fileNumber = String(i + 1).padStart(padding, '0');
-                const fileName = `${baseName}_${fileNumber}.png`;
+                const rawName = template
+                    ? resolveTemplate(template, lineData.parsedLine, headers, i + 1, padding, timestamp)
+                    : `${baseName}_${fileNumber}`;
+                const fileName = getUniqueFileName(rawName, usedFileNames) + '.png';
                 try {
                     const blob = await generateQRCodeBlob(lineData, imageSize, true, true);
                     const url = URL.createObjectURL(blob);
