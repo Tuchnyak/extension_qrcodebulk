@@ -677,3 +677,12 @@ input[type="checkbox"] {
     font-size: 13px;
     color: #cc0000;
 }
+
+/* Filename template preview */
+.template-preview {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    min-height: 16px;
+}
