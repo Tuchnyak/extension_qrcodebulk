@@ -118,7 +118,9 @@ function updateTemplatePreview() {
         return;
     }
     const { parsedLines, headers } = parseData();
-    const previewPadding = 3;
+    const previewPadding = parsedLines.length > 0
+        ? Math.max(2, Math.ceil(Math.log10(parsedLines.length + 1)))
+        : 2;
     const batchDate = new Date();
     let preview;
     if (parsedLines.length > 0) {
