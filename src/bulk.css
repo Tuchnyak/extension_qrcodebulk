@@ -678,6 +678,19 @@ input[type="checkbox"] {
     color: #cc0000;
 }
 
+/* Filename template section */
+.filename-template-section {
+    margin-bottom: 25px;
+    padding: 15px 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+#filename-template-input {
+    flex: 1;
+}
+
 /* Filename template preview */
 .template-preview {
     font-size: 12px;

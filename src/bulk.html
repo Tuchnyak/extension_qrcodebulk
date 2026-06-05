@@ -61,6 +61,15 @@
             </p>
         </div>
 
+        <!-- Filename Template -->
+        <div class="filename-template-section">
+            <div class="control-group">
+                <label for="filename-template-input">File name template:</label>
+                <input type="text" id="filename-template-input" value="{count}-qrcode" placeholder="">
+            </div>
+            <div id="filename-template-preview" class="template-preview"></div>
+        </div>
+
         <!-- Data Input -->
         <div class="data-input">
             <textarea id="data-textarea"
@@ -94,11 +103,6 @@
                     <option value="2048">2048</option>
                     <option value="4096">4096</option>
                 </select>
-            </div>
-            <div class="control-group">
-                <label for="filename-template-input">File name template:</label>
-                <input type="text" id="filename-template-input" value="{count}-qrcode" placeholder="">
-                <div id="filename-template-preview" class="template-preview"></div>
             </div>
         </div>
     </div>
