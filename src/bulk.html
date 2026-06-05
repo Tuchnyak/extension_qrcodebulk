@@ -22,6 +22,7 @@
             <p><strong>Example (URL only):</strong> <code>https://google.com</code></p>
             <p><strong>CSV example:</strong> <code>top_text<span class="separator-highlight">;</span>URL<span
                         class="separator-highlight">;</span>bottom_text</code></p>
+            <p><strong>Template variables:</strong> <code>{count}</code> — sequence №, <code>{date}</code> — YYYYMMDD, <code>{date:DD-MM-YYYY}</code> — custom format, <code>{col-1}</code> — column by index, <code>{col-Name}</code> — column by header name</p>
         </div>
 
         <!-- CSV Controls -->
@@ -96,7 +97,7 @@
             </div>
             <div class="control-group">
                 <label for="filename-template-input">File name template:</label>
-                <input type="text" id="filename-template-input" placeholder="leave empty for default">
+                <input type="text" id="filename-template-input" value="{count}-qrcode" placeholder="">
                 <div id="filename-template-preview" class="template-preview"></div>
             </div>
         </div>

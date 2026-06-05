@@ -1276,10 +1276,10 @@ function restoreColumnMapping() {
 
 function restoreFilenameTemplate() {
     chrome.storage.local.get(['filenameTemplate'], (result) => {
-        if (result.filenameTemplate) {
+        if (result.filenameTemplate !== undefined) {
             elements.filenameTemplateInput.value = result.filenameTemplate;
-            updateTemplatePreview();
         }
+        updateTemplatePreview();
     });
 }
 
