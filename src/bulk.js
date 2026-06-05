@@ -55,6 +55,61 @@ function applyAutoDefaults(colCount) {
         : { qrContent: 0, title: null, footer: null };
 }
 
+function resolveTemplate(template, parsedLine, headers, count, padding, batchDate) {
+    const cols = parsedLine.columns;
+    const year  = String(batchDate.getFullYear());
+    const month = String(batchDate.getMonth() + 1).padStart(2, '0');
+    const day   = String(batchDate.getDate()).padStart(2, '0');
+
+    let result = template.replace(/\{([^}]+)\}/g, (match, token) => {
+        if (token === 'count') {
+            return String(count).padStart(padding, '0');
+        }
+        if (token === 'date') {
+            return `${year}${month}${day}`;
+        }
+        if (token.startsWith('date:')) {
+            const fmt = token.slice(5);
+            return fmt.replace(/YYYY/g, year).replace(/MM/g, month).replace(/DD/g, day);
+        }
+        if (token.startsWith('col-')) {
+            const colPart = token.slice(4);
+            if (/^\d+$/.test(colPart)) {
+                // numeric 1-based index; return '' for empty cols, match for out-of-range
+                const idx = parseInt(colPart, 10) - 1;
+                return cols[idx] !== undefined ? cols[idx] : match;
+            }
+            // header name lookup; col-Name with headers off → leave as-is
+            if (!headers) return match;
+            const hi = headers.indexOf(colPart);
+            return hi !== -1 && cols[hi] !== undefined ? cols[hi] : match;
+        }
+        return match; // unknown token → leave as-is
+    });
+
+    // Sanitize forbidden filename characters
+    result = result.replace(/[/\\:*?"<>|]/g, '_');
+
+    // Fallback to zero-padded count if result is empty
+    if (!result.trim()) {
+        result = String(count).padStart(padding, '0');
+    }
+
+    return result;
+}
+
+function getUniqueFileName(name, usedNames) {
+    if (!usedNames.has(name)) {
+        usedNames.add(name);
+        return name;
+    }
+    let n = 2;
+    while (usedNames.has(`${name}_${n}`)) n++;
+    const unique = `${name}_${n}`;
+    usedNames.add(unique);
+    return unique;
+}
+
 function parseHeadersFromTextarea() {
     const separator = elements.separatorInput.value;
     const firstLine = elements.dataTextarea.value.split('\n').find(l => l.trim());
