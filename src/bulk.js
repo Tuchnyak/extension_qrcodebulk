@@ -8,6 +8,7 @@ let isGenerating = false;
 let columnMapping = { qrContent: null, title: null, footer: null };
 let lastKnownColumnCount = null;
 let pendingFileUpload = false;
+let templateDebounceTimer = null;
 
 // DOM elements
 let elements = {};
@@ -110,6 +111,28 @@ function getUniqueFileName(name, usedNames) {
     return unique;
 }
 
+function updateTemplatePreview() {
+    const template = elements.filenameTemplateInput.value.trim();
+    if (!template) {
+        elements.filenameTemplatePreview.textContent = '';
+        return;
+    }
+    const { parsedLines, headers } = parseData();
+    const previewPadding = 3;
+    const batchDate = new Date();
+    let preview;
+    if (parsedLines.length > 0) {
+        preview = resolveTemplate(template, parsedLines[0], headers, 1, previewPadding, batchDate);
+    } else {
+        preview = resolveTemplate(template, { columns: [] }, null, 1, previewPadding, batchDate);
+    }
+    elements.filenameTemplatePreview.textContent = `Preview: ${preview}`;
+}
+
+function saveFilenameTemplate() {
+    chrome.storage.local.set({ filenameTemplate: elements.filenameTemplateInput.value });
+}
+
 function parseHeadersFromTextarea() {
     const separator = elements.separatorInput.value;
     const firstLine = elements.dataTextarea.value.split('\n').find(l => l.trim());
@@ -175,7 +198,9 @@ function initializeElements() {
         fgPickerCanvas: document.getElementById('fg-picker-canvas'),
         resetColorsBtn: document.getElementById('reset-colors-btn'),
         versionLabel: document.getElementById('version-label'),
-        feedbackLink: document.getElementById('feedback-link')
+        feedbackLink: document.getElementById('feedback-link'),
+        filenameTemplateInput: document.getElementById('filename-template-input'),
+        filenameTemplatePreview: document.getElementById('filename-template-preview'),
     };
 }
 
@@ -231,6 +256,12 @@ function wireUpEventListeners() {
 
     // File name validation
     elements.fileNameInput.addEventListener('input', validateFileName);
+
+    elements.filenameTemplateInput.addEventListener('input', () => {
+        saveFilenameTemplate();
+        clearTimeout(templateDebounceTimer);
+        templateDebounceTimer = setTimeout(updateTemplatePreview, 300);
+    });
 
     // Color customization
     elements.bgColorBtn.addEventListener('click', (e) => toggleColorPicker('bg', e));
@@ -758,6 +789,7 @@ function lockUI() {
         elements.mappingQrContent,
         elements.mappingTitle,
         elements.mappingFooter,
+        elements.filenameTemplateInput,
     ];
 
     controls.forEach(control => {
@@ -780,6 +812,7 @@ function unlockUI() {
         elements.mappingQrContent,
         elements.mappingTitle,
         elements.mappingFooter,
+        elements.filenameTemplateInput,
     ];
 
     controls.forEach(control => {
