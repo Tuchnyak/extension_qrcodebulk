@@ -678,17 +678,27 @@ input[type="checkbox"] {
     color: #cc0000;
 }
 
-/* Filename template section */
-.filename-template-section {
-    margin-bottom: 25px;
-    padding: 15px 20px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
+.mapping-template-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
 }
 
-#filename-template-input {
+.mapping-template-row label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.mapping-template-row input {
     flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 14px;
 }
 
 /* Filename template preview */
