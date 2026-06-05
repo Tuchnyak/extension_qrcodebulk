@@ -351,10 +351,9 @@ input[type="checkbox"] {
 /* Rating Banner */
 .rating-banner {
     position: fixed;
-    bottom: 20px; /* Отступ от низа */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 280px; /* Уменьшенная ширина */
+    bottom: 20px;
+    left: 20px;
+    width: auto;
     background-color: #e0e0e0; /* Чуть темнее фон */
     color: #555; /* Темный текст */
     padding: 10px 20px;
