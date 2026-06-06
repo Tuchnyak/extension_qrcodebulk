@@ -41,6 +41,40 @@ function nextTick() {
     return new Promise(resolve => setTimeout(resolve, 0));
 }
 
+function parseCSVLine(line, separator) {
+    const parts = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (inQuotes) {
+            if (ch === '"') {
+                if (i + 1 < line.length && line[i + 1] === '"') {
+                    current += '"';
+                    i++; // skip escaped quote
+                } else {
+                    inQuotes = false;
+                }
+            } else {
+                current += ch;
+            }
+        } else {
+            if (ch === '"' && current.trim() === '') {
+                inQuotes = true;
+                current = '';
+            } else if (ch === separator) {
+                parts.push(current.trim());
+                current = '';
+            } else {
+                current += ch;
+            }
+        }
+    }
+    parts.push(current.trim());
+    return parts;
+}
+
 function applyMapping(parsedLine, mapping) {
     const cols = parsedLine.columns;
     return {
@@ -362,7 +396,7 @@ function parseData() {
     let headers = null;
     let dataLines = rawLines;
     if (hasHeader && rawLines.length > 0) {
-        headers = rawLines[0].split(separator).map(h => h.trim());
+        headers = parseCSVLine(rawLines[0], separator);
         dataLines = rawLines.slice(1);
     }
 
@@ -370,8 +404,8 @@ function parseData() {
     let maxCols = 1;
     const split = dataLines.map((line, idx) => {
         const parts = separator && line.includes(separator)
-            ? line.split(separator).map(p => p.trim())
-            : [line];
+            ? parseCSVLine(line, separator)
+            : [line.trim()];
         if (parts.length > maxCols) maxCols = parts.length;
         return { parts, line, idx };
     });
