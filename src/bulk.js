@@ -316,7 +316,7 @@ function handleFileUpload(event) {
     pendingFileUpload = true;
     const reader = new FileReader();
     reader.onload = (e) => {
-        elements.dataTextarea.value = e.target.result;
+        elements.dataTextarea.value = e.target.result.replace(/^﻿/, '');
         updateCSVControls();
         updateGenerateButtonText();
         saveTextareaContent();
