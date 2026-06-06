@@ -173,7 +173,7 @@ function parseHeadersFromTextarea() {
     const separator = elements.separatorInput.value;
     const firstLine = elements.dataTextarea.value.split('\n').find(l => l.trim());
     if (!firstLine || !firstLine.includes(separator)) return null;
-    return firstLine.split(separator).map(h => h.trim());
+    return parseCSVLine(firstLine, separator);
 }
 
 function buildMappingSelects(colCount, headers) {
@@ -348,7 +348,7 @@ function updateCSVControls() {
     let maxCols = 1;
     dataLines.forEach(line => {
         if (line.includes(separator)) {
-            const count = line.split(separator).length;
+            const count = parseCSVLine(line, separator).length;
             if (count > maxCols) maxCols = count;
         }
     });
