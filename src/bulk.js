@@ -359,9 +359,14 @@ function updateCSVControls() {
     pendingFileUpload = false;
     lastKnownColumnCount = maxCols;
 
-    // Reset mapping to auto-defaults on file upload or first detection
-    if (isFileUpload || isFirstLoad) {
+    // Reset mapping to auto-defaults on file upload only
+    if (isFileUpload) {
         applyAutoDefaults(maxCols);
+    } else if (isFirstLoad) {
+        // First manual CSV entry: apply defaults only if no mapping is set yet
+        if (columnMapping.qrContent === null) {
+            applyAutoDefaults(maxCols);
+        }
     }
 
     // Build selects using header names if available
@@ -469,7 +474,8 @@ async function handleGenerate() {
         const subDir = `001_bulk_qr_codes/${baseName}`;
 
         const padding = Math.max(2, Math.ceil(Math.log10(validLines.length + 1)));
-        const template = elements.filenameTemplateInput.value.trim();
+        const mappingVisible = elements.mappingSection.style.display !== 'none';
+        const template = mappingVisible ? elements.filenameTemplateInput.value.trim() : '';
         const usedFileNames = new Set();
         let successCount = 0;
         const errors = [];
@@ -1284,6 +1290,7 @@ function restoreTextareaContent() {
             updateGenerateButtonText();
             checkAndRenderPreview();
         }
+        restoreColumnMapping();
     });
 }
 
@@ -1344,8 +1351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupRatingBanner();
     restorePreviewPanelState();
     restoreSeparator();
-    restoreTextareaContent();
-    restoreColumnMapping();      // MUST be after restoreTextareaContent
+    restoreTextareaContent();    // calls restoreColumnMapping() in its callback
     restoreFilenameTemplate();
     restoreColorSettings();
 });
