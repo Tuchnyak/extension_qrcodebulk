@@ -543,3 +543,40 @@ Goal: Add customization options for QR code appearance (colors, branded center l
         4. Test storage persistence: refresh page, verify colors are restored.
         5. Verify QR codes are still scannable.
     - *Note: Step 41 (custom center image) deferred to future release branch.*
+
+---
+
+### Phase 13: N-Column CSV Mapping + File Name Templating ✅ COMPLETED (v1.1.0, 2026-06-13)
+
+Goal: Support any number of CSV columns via a mapping UI, and allow per-file naming via a template with column and date variables.
+
+**Spec**: `docs/superpowers/specs/2026-05-31-csv-mapping-and-filename-template-design.md`
+
+- [x] **Stage 1: N-column CSV support + column mapping UI**
+    - `parseCSVLine(line, separator)` — RFC 4180 parser (quoted fields, escaped double-quotes)
+    - `parseData()` rewritten → `{ parsedLines: [{ columns, originalLine, lineNumber }], headers }`
+    - `applyMapping(parsedLine, mapping)` → `{ url, topText, bottomText }` pure function
+    - `applyAutoDefaults(colCount)` — auto-selects on first CSV detection (not on file upload if mapping already set)
+    - `effectiveMapping` fallback for plain URL mode: `{ qrContent: 0, title: null, footer: null }`
+    - Mapping section UI: three selects (QR content, Title, Footer) + "First row is headers" checkbox
+    - Mapping and has-header state persisted to `chrome.storage.local`
+    - Old "Include top/bottom text" checkboxes removed entirely
+
+- [x] **Stage 2: File name templating**
+    - `resolveTemplate(template, parsedLine, headers, count, padding, batchDate)` — pure function
+      - Variables: `{count}`, `{date}`, `{date:FORMAT}`, `{col-N}` (1-based), `{col-Name}` (header lookup)
+      - Sanitizes forbidden filename chars to `_`; falls back to zero-padded count if result is empty
+    - `getUniqueFileName(name, usedNames)` — collision handling via Set (`_2`, `_3`, …)
+    - Template input merged into mapping section block; live preview with 300 ms debounce
+    - Template persisted to `chrome.storage.local`; default value `{count}-qrcode`
+    - Custom Filename field removed; folder naming is timestamp-only (`yyyyMMdd_HHmmss`)
+    - Template ignored in plain URL mode
+
+- [x] **Bug fixes during testing**
+    - Quoted CSV fields: `"Braund, Mr. Owen Harris"` now parsed as a single value
+    - UTF-8 BOM stripped from file uploads
+    - Column count and header detection fixed to use `parseCSVLine` (not naive `.split()`)
+    - Separator persisted to `chrome.storage.local`
+    - File upload preserves existing mapping and separator
+    - `restoreColumnMapping` chained inside `restoreTextareaContent` callback (explicit ordering)
+    - Folder/archive timestamp now includes seconds for uniqueness on rapid generations
