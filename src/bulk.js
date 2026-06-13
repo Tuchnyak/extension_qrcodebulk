@@ -258,6 +258,7 @@ function wireUpEventListeners() {
 
     // Separator changes - update CSV controls and preview
     elements.separatorInput.addEventListener('input', () => {
+        chrome.storage.local.set({ separator: elements.separatorInput.value });
         updateCSVControls();
         renderPreview();
     });
@@ -916,6 +917,15 @@ function saveHasHeaderRow() {
     chrome.storage.local.set({ hasHeaderRow: elements.hasHeaderCheckbox.checked });
 }
 
+function restoreSeparator() {
+    chrome.storage.local.get(['separator'], (result) => {
+        if (result.separator !== undefined) {
+            elements.separatorInput.value = result.separator;
+            updateCSVControls();
+        }
+    });
+}
+
 function readMappingFromSelects() {
     function parseVal(el) {
         return el.value === '' ? null : parseInt(el.value, 10);
@@ -1333,6 +1343,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGenerateButtonText();
     setupRatingBanner();
     restorePreviewPanelState();
+    restoreSeparator();
     restoreTextareaContent();
     restoreColumnMapping();      // MUST be after restoreTextareaContent
     restoreFilenameTemplate();
