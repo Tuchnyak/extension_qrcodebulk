@@ -359,19 +359,16 @@ function updateCSVControls() {
     pendingFileUpload = false;
     lastKnownColumnCount = maxCols;
 
-    // Reset mapping to auto-defaults on file upload only
-    if (isFileUpload) {
+    // Apply auto-defaults only when no mapping has been set yet
+    if (columnMapping.qrContent === null) {
         applyAutoDefaults(maxCols);
-    } else if (isFirstLoad) {
-        // First manual CSV entry: apply defaults only if no mapping is set yet
-        if (columnMapping.qrContent === null) {
-            applyAutoDefaults(maxCols);
-        }
     }
 
     // Build selects using header names if available
     const headers = hasHeader ? parseHeadersFromTextarea() : null;
     buildMappingSelects(maxCols, headers);
+    // Sync in-memory mapping from select values — handles out-of-range indices after column count changes
+    readMappingFromSelects();
     elements.mappingSection.style.display = '';
     updateGenerateBtn();
 }
