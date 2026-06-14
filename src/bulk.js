@@ -18,9 +18,6 @@ let originalGenerateBtnText = '';
 const DEFAULT_BG_COLOR = '#ffffff';
 const DEFAULT_FG_COLOR = '#000000';
 
-// Feature flags
-const ENABLE_CENTER_LABEL = true;
-
 // Small helpers to update progress on the Generate button
 function saveOriginalGenerateButtonText() {
     if (elements.generateBtn) originalGenerateBtnText = elements.generateBtn.textContent;
@@ -236,6 +233,7 @@ function initializeElements() {
         feedbackLink: document.getElementById('feedback-link'),
         filenameTemplateInput: document.getElementById('filename-template-input'),
         filenameTemplatePreview: document.getElementById('filename-template-preview'),
+        centerLabelCheckbox: document.getElementById('center-label-checkbox'),
     };
 }
 
@@ -294,6 +292,11 @@ function wireUpEventListeners() {
         saveFilenameTemplate();
         clearTimeout(templateDebounceTimer);
         templateDebounceTimer = setTimeout(updateTemplatePreview, 300);
+    });
+
+    elements.centerLabelCheckbox.addEventListener('change', () => {
+        chrome.storage.local.set({ showCenterLabel: elements.centerLabelCheckbox.checked });
+        renderPreview();
     });
 
     // Color customization
@@ -594,7 +597,7 @@ async function handleGenerate() {
     }
 }
 
-async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText) {
+async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText, showCenterLabel) {
     const bgColor = rgbToHex(elements.bgColorBtn.style.backgroundColor) || DEFAULT_BG_COLOR;
     const fgColor = rgbToHex(elements.fgColorBtn.style.backgroundColor) || DEFAULT_FG_COLOR;
 
@@ -616,7 +619,7 @@ async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBo
                 let finalCanvas = qrCanvas;
 
                 // Draw center label (Pax Cultura symbol)
-                drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor);
+                drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor, showCenterLabel);
 
                 // Add text if requested and available
                 if ((includeTopText && lineData.topText) || (includeBottomText && lineData.bottomText)) {
@@ -730,8 +733,8 @@ function wrapTextToWidth(ctx, text, maxWidth) {
     return lines;
 }
 
-function drawCenterLabel(ctx, size, fgColor, bgColor) {
-    if (!ENABLE_CENTER_LABEL) return;
+function drawCenterLabel(ctx, size, fgColor, bgColor, showCenterLabel) {
+    if (!showCenterLabel) return;
 
     const r       = size * 0.07; // 14% diameter — safe under QR EC level M (15% area tolerance)
     const cx      = size / 2;
@@ -822,6 +825,7 @@ function lockUI() {
         elements.mappingTitle,
         elements.mappingFooter,
         elements.filenameTemplateInput,
+        elements.centerLabelCheckbox,
     ];
 
     controls.forEach(control => {
@@ -832,7 +836,7 @@ function lockUI() {
 function unlockUI() {
     elements.generateBtn.disabled = false;
     updateGenerateButtonText();
-    
+
     // Re-enable all form controls
     const controls = [
         elements.separatorInput,
@@ -844,6 +848,7 @@ function unlockUI() {
         elements.mappingTitle,
         elements.mappingFooter,
         elements.filenameTemplateInput,
+        elements.centerLabelCheckbox,
     ];
 
     controls.forEach(control => {
@@ -1006,7 +1011,7 @@ async function generatePreviewQR(url, imageSize, topText, bottomText, includeTop
         canvas.height = qrCanvas.height;
 
         // Draw center label (Pax Cultura symbol)
-        drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor);
+        drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor, elements.centerLabelCheckbox.checked);
 
         let finalCanvas = qrCanvas;
 
@@ -1258,6 +1263,15 @@ function saveColors() {
     }
 }
 
+function restoreShowCenterLabel() {
+    chrome.storage.local.get(['showCenterLabel'], (result) => {
+        if (result.showCenterLabel !== undefined) {
+            elements.centerLabelCheckbox.checked = result.showCenterLabel;
+        }
+        renderPreview();
+    });
+}
+
 function restoreColorSettings() {
     chrome.storage.local.get(['qrBackgroundColor', 'qrForegroundColor'], (result) => {
         if (result.qrBackgroundColor) {
@@ -1352,4 +1366,5 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreTextareaContent();    // calls restoreColumnMapping() in its callback
     restoreFilenameTemplate();
     restoreColorSettings();
+    restoreShowCenterLabel();
 });
