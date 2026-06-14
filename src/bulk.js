@@ -1503,8 +1503,6 @@ function restoreTextareaContent() {
         if (result.textareaContent) {
             elements.dataTextarea.value = result.textareaContent;
             updateCSVControls();
-            updateGenerateButtonText();
-            checkAndRenderPreview();
         }
         restoreColumnMapping();
     });
