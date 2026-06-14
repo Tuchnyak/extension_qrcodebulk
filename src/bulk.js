@@ -674,14 +674,14 @@ async function generateQRCodeSVG(lineData, imageSize, showCenterLabel) {
     // Typography — same ratios as PNG path, in SVG user units
     const fontSize = svgSize * 0.08;
     const lineHeight = fontSize * 1.3;
-    const padding = svgSize * 0.02;
+    const padding = svgSize * 0.01;
     const maxTextWidth = svgSize - padding * 2;
 
     const topLines = lineData.topText
-        ? wrapTextToSVGWidth(lineData.topText, maxTextWidth, fontSize, viewBoxAttr)
+        ? wrapTextToSVGWidth(lineData.topText, maxTextWidth, fontSize, viewBoxAttr, imageSize)
         : [];
     const bottomLines = lineData.bottomText
-        ? wrapTextToSVGWidth(lineData.bottomText, maxTextWidth, fontSize, viewBoxAttr)
+        ? wrapTextToSVGWidth(lineData.bottomText, maxTextWidth, fontSize, viewBoxAttr, imageSize)
         : [];
 
     const topHeight = topLines.length > 0 ? padding + topLines.length * lineHeight + padding : 0;
@@ -860,25 +860,22 @@ function wrapTextToWidth(ctx, text, maxWidth) {
     return lines;
 }
 
-function wrapTextToSVGWidth(text, maxWidth, fontSize, viewBox) {
-    const ns = 'http://www.w3.org/2000/svg';
-    const testSvg = document.createElementNS(ns, 'svg');
-    testSvg.setAttribute('viewBox', viewBox);
-    testSvg.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;width:1px;height:1px';
-    document.body.appendChild(testSvg);
-
-    const testText = document.createElementNS(ns, 'text');
-    testText.setAttribute('font-size', fontSize);
-    testText.setAttribute('font-family', 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif');
-    testSvg.appendChild(testText);
+function wrapTextToSVGWidth(text, maxWidth, fontSize, viewBox, imageSize) {
+    // Canvas measurement is reliable without DOM layout; convert SVG user units to px via scale.
+    // scale = imageSize / svgSize: the actual pixel-per-user-unit ratio of the rendered SVG.
+    const svgSize = parseFloat(viewBox.trim().split(/\s+/)[2]);
+    const scale = imageSize / svgSize;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.font = `${fontSize * scale}px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif`;
+    const maxPx = maxWidth * scale;
 
     const lines = [];
     let currentLine = '';
 
     for (const ch of text) {
         const next = currentLine + ch;
-        testText.textContent = next;
-        if (testText.getComputedTextLength() <= maxWidth || currentLine.length === 0) {
+        if (ctx.measureText(next).width <= maxPx || currentLine.length === 0) {
             currentLine = next;
         } else {
             lines.push(currentLine);
@@ -886,8 +883,6 @@ function wrapTextToSVGWidth(text, maxWidth, fontSize, viewBox) {
         }
     }
     if (currentLine) lines.push(currentLine);
-
-    document.body.removeChild(testSvg);
     return lines;
 }
 
@@ -1543,6 +1538,8 @@ function restoreColumnMapping() {
         }
 
         updateGenerateBtn();
+        updateGenerateButtonText();
+        renderPreview();
     });
 }
 

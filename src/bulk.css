@@ -232,6 +232,13 @@ input[type="checkbox"] {
     padding: 10px 0;
 }
 
+.advanced-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
 .advanced-settings h3 {
     margin: 0;
     font-size: 1.2em;
