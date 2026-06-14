@@ -473,6 +473,9 @@ async function handleGenerate() {
     try {
         const timestamp = new Date();
         const imageSize = parseInt(elements.imageSizeInput.value) || 512;
+        const format = elements.outputFormatSelect.value;
+        const showCenterLabel = elements.centerLabelCheckbox.checked;
+        const ext = format === 'svg' ? '.svg' : '.png';
 
         const timestampStr = formatTimestamp(timestamp);
         const baseName = timestampStr;
@@ -494,9 +497,11 @@ async function handleGenerate() {
                 const rawName = template
                     ? resolveTemplate(template, lineData.parsedLine, headers, i + 1, padding, timestamp)
                     : `${baseName}_${fileNumber}`;
-                const fileName = getUniqueFileName(rawName, usedFileNames) + '.png';
+                const fileName = getUniqueFileName(rawName, usedFileNames) + ext;
                 try {
-                    const blob = await generateQRCodeBlob(lineData, imageSize, true, true);
+                    const blob = format === 'svg'
+                        ? await generateQRCodeSVG(lineData, imageSize, showCenterLabel)
+                        : await generateQRCodeBlob(lineData, imageSize, true, true, showCenterLabel);
                     zip.file(fileName, blob);
                     successCount++;
                     // update progress and yield briefly to allow UI update on large batches
@@ -546,9 +551,11 @@ async function handleGenerate() {
                 const rawName = template
                     ? resolveTemplate(template, lineData.parsedLine, headers, i + 1, padding, timestamp)
                     : `${baseName}_${fileNumber}`;
-                const fileName = getUniqueFileName(rawName, usedFileNames) + '.png';
+                const fileName = getUniqueFileName(rawName, usedFileNames) + ext;
                 try {
-                    const blob = await generateQRCodeBlob(lineData, imageSize, true, true);
+                    const blob = format === 'svg'
+                        ? await generateQRCodeSVG(lineData, imageSize, showCenterLabel)
+                        : await generateQRCodeBlob(lineData, imageSize, true, true, showCenterLabel);
                     const url = URL.createObjectURL(blob);
                     lastDownloadId = await new Promise((resolve, reject) => {
                         chrome.downloads.download({
