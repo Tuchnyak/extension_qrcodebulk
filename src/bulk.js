@@ -738,6 +738,37 @@ function wrapTextToWidth(ctx, text, maxWidth) {
     return lines;
 }
 
+function wrapTextToSVGWidth(text, maxWidth, fontSize, viewBox) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const testSvg = document.createElementNS(ns, 'svg');
+    testSvg.setAttribute('viewBox', viewBox);
+    testSvg.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;width:1px;height:1px';
+    document.body.appendChild(testSvg);
+
+    const testText = document.createElementNS(ns, 'text');
+    testText.setAttribute('font-size', fontSize);
+    testText.setAttribute('font-family', 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif');
+    testSvg.appendChild(testText);
+
+    const lines = [];
+    let currentLine = '';
+
+    for (const ch of text) {
+        const next = currentLine + ch;
+        testText.textContent = next;
+        if (testText.getComputedTextLength() <= maxWidth || currentLine.length === 0) {
+            currentLine = next;
+        } else {
+            lines.push(currentLine);
+            currentLine = ch;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+
+    document.body.removeChild(testSvg);
+    return lines;
+}
+
 function drawCenterLabel(ctx, size, fgColor, bgColor, showCenterLabel) {
     if (!showCenterLabel) return;
 
