@@ -234,6 +234,7 @@ function initializeElements() {
         filenameTemplateInput: document.getElementById('filename-template-input'),
         filenameTemplatePreview: document.getElementById('filename-template-preview'),
         centerLabelCheckbox: document.getElementById('center-label-checkbox'),
+        outputFormatSelect: document.getElementById('output-format-select'),
     };
 }
 
@@ -297,6 +298,10 @@ function wireUpEventListeners() {
     elements.centerLabelCheckbox.addEventListener('change', () => {
         chrome.storage.local.set({ showCenterLabel: elements.centerLabelCheckbox.checked });
         renderPreview();
+    });
+
+    elements.outputFormatSelect.addEventListener('change', () => {
+        chrome.storage.local.set({ outputFormat: elements.outputFormatSelect.value });
     });
 
     // Color customization
@@ -826,6 +831,7 @@ function lockUI() {
         elements.mappingFooter,
         elements.filenameTemplateInput,
         elements.centerLabelCheckbox,
+        elements.outputFormatSelect,
     ];
 
     controls.forEach(control => {
@@ -849,6 +855,7 @@ function unlockUI() {
         elements.mappingFooter,
         elements.filenameTemplateInput,
         elements.centerLabelCheckbox,
+        elements.outputFormatSelect,
     ];
 
     controls.forEach(control => {
@@ -1263,6 +1270,14 @@ function saveColors() {
     }
 }
 
+function restoreOutputFormat() {
+    chrome.storage.local.get(['outputFormat'], (result) => {
+        if (result.outputFormat) {
+            elements.outputFormatSelect.value = result.outputFormat;
+        }
+    });
+}
+
 function restoreShowCenterLabel() {
     chrome.storage.local.get(['showCenterLabel'], (result) => {
         if (result.showCenterLabel !== undefined) {
@@ -1367,4 +1382,5 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreFilenameTemplate();
     restoreColorSettings();
     restoreShowCenterLabel();
+    restoreOutputFormat();
 });
