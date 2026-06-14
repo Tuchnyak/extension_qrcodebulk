@@ -225,11 +225,11 @@ input[type="checkbox"] {
 /* Advanced Settings */
 .advanced-settings {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 15px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
     margin-bottom: 25px;
-    padding: 10px 0; /* Simple vertical padding */
+    padding: 10px 0;
 }
 
 .advanced-settings h3 {

@@ -721,12 +721,15 @@ async function generateQRCodeSVG(lineData, imageSize, showCenterLabel) {
     }
 
     const cx = svgSize / 2;
-    // Use explicit y per tspan instead of dominant-baseline for cross-renderer compatibility.
-    // fontSize * 0.75 approximates cap-height: places the top of glyphs near the desired y.
-    const capOffset = fontSize * 0.75;
+    // fontSize * 0.8 ≈ ascender height: baseline = top-of-area + 0.8*fontSize
+    // Each <text> also gets x/y as fallback for renderers that ignore <tspan y>.
+    const capOffset = fontSize * 0.8;
 
     if (topLines.length > 0) {
+        const baseY = padding + capOffset;
         const textEl = doc.createElementNS(ns, 'text');
+        textEl.setAttribute('x', cx);
+        textEl.setAttribute('y', baseY);
         textEl.setAttribute('font-size', fontSize);
         textEl.setAttribute('font-family', 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif');
         textEl.setAttribute('fill', fgColor);
@@ -734,7 +737,7 @@ async function generateQRCodeSVG(lineData, imageSize, showCenterLabel) {
         topLines.forEach((line, i) => {
             const tspan = doc.createElementNS(ns, 'tspan');
             tspan.setAttribute('x', cx);
-            tspan.setAttribute('y', padding + capOffset + i * lineHeight);
+            tspan.setAttribute('y', baseY + i * lineHeight);
             tspan.textContent = line;
             textEl.appendChild(tspan);
         });
@@ -742,7 +745,10 @@ async function generateQRCodeSVG(lineData, imageSize, showCenterLabel) {
     }
 
     if (bottomLines.length > 0) {
+        const baseY = svgSize + topHeight + padding + capOffset;
         const textEl = doc.createElementNS(ns, 'text');
+        textEl.setAttribute('x', cx);
+        textEl.setAttribute('y', baseY);
         textEl.setAttribute('font-size', fontSize);
         textEl.setAttribute('font-family', 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif');
         textEl.setAttribute('fill', fgColor);
@@ -750,7 +756,7 @@ async function generateQRCodeSVG(lineData, imageSize, showCenterLabel) {
         bottomLines.forEach((line, i) => {
             const tspan = doc.createElementNS(ns, 'tspan');
             tspan.setAttribute('x', cx);
-            tspan.setAttribute('y', svgSize + topHeight + padding + capOffset + i * lineHeight);
+            tspan.setAttribute('y', baseY + i * lineHeight);
             tspan.textContent = line;
             textEl.appendChild(tspan);
         });
