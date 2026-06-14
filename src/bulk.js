@@ -772,6 +772,47 @@ function drawCenterLabel(ctx, size, fgColor, bgColor, showCenterLabel) {
     });
 }
 
+function addCenterLabelToSVG(container, size, fgColor, bgColor) {
+    const doc = container.ownerDocument;
+    const ns = 'http://www.w3.org/2000/svg';
+    const r = size * 0.07;
+    const cx = size / 2;
+    const cy = size / 2;
+    const pad = r * 0.15;
+    const cornerR = r * 0.22;
+    const sw = r * 0.13;
+    const dotR = r * 0.24;
+    const dotDist = r * 0.47;
+
+    const bg = doc.createElementNS(ns, 'rect');
+    bg.setAttribute('x', cx - r - pad);
+    bg.setAttribute('y', cy - r - pad);
+    bg.setAttribute('width', (r + pad) * 2);
+    bg.setAttribute('height', (r + pad) * 2);
+    bg.setAttribute('rx', cornerR);
+    bg.setAttribute('ry', cornerR);
+    bg.setAttribute('fill', bgColor);
+    container.appendChild(bg);
+
+    const ring = doc.createElementNS(ns, 'circle');
+    ring.setAttribute('cx', cx);
+    ring.setAttribute('cy', cy);
+    ring.setAttribute('r', r - sw / 2);
+    ring.setAttribute('stroke', fgColor);
+    ring.setAttribute('stroke-width', sw);
+    ring.setAttribute('fill', 'none');
+    container.appendChild(ring);
+
+    [[0, -1], [-0.866, 0.5], [0.866, 0.5]].forEach(([dx, dy]) => {
+        const dot = doc.createElementNS(ns, 'circle');
+        dot.setAttribute('cx', cx + dx * dotDist);
+        dot.setAttribute('cy', cy + dy * dotDist);
+        dot.setAttribute('r', dotR);
+        dot.setAttribute('fill', fgColor);
+        container.appendChild(dot);
+    });
+}
+
 async function createErrorLog(errors, subDir) {
     const errorContent = errors.map(error => 
         `Line ${error.lineNumber}: ${error.line} - ${error.reason}`
