@@ -18,9 +18,6 @@ let originalGenerateBtnText = '';
 const DEFAULT_BG_COLOR = '#ffffff';
 const DEFAULT_FG_COLOR = '#000000';
 
-// Feature flags
-const ENABLE_CENTER_LABEL = true;
-
 // Small helpers to update progress on the Generate button
 function saveOriginalGenerateButtonText() {
     if (elements.generateBtn) originalGenerateBtnText = elements.generateBtn.textContent;
@@ -236,6 +233,8 @@ function initializeElements() {
         feedbackLink: document.getElementById('feedback-link'),
         filenameTemplateInput: document.getElementById('filename-template-input'),
         filenameTemplatePreview: document.getElementById('filename-template-preview'),
+        centerLabelCheckbox: document.getElementById('center-label-checkbox'),
+        outputFormatSelect: document.getElementById('output-format-select'),
     };
 }
 
@@ -294,6 +293,15 @@ function wireUpEventListeners() {
         saveFilenameTemplate();
         clearTimeout(templateDebounceTimer);
         templateDebounceTimer = setTimeout(updateTemplatePreview, 300);
+    });
+
+    elements.centerLabelCheckbox.addEventListener('change', () => {
+        chrome.storage.local.set({ showCenterLabel: elements.centerLabelCheckbox.checked });
+        renderPreview();
+    });
+
+    elements.outputFormatSelect.addEventListener('change', () => {
+        chrome.storage.local.set({ outputFormat: elements.outputFormatSelect.value });
     });
 
     // Color customization
@@ -465,6 +473,9 @@ async function handleGenerate() {
     try {
         const timestamp = new Date();
         const imageSize = parseInt(elements.imageSizeInput.value) || 512;
+        const format = elements.outputFormatSelect.value;
+        const showCenterLabel = elements.centerLabelCheckbox.checked;
+        const ext = format === 'svg' ? '.svg' : '.png';
 
         const timestampStr = formatTimestamp(timestamp);
         const baseName = timestampStr;
@@ -486,9 +497,11 @@ async function handleGenerate() {
                 const rawName = template
                     ? resolveTemplate(template, lineData.parsedLine, headers, i + 1, padding, timestamp)
                     : `${baseName}_${fileNumber}`;
-                const fileName = getUniqueFileName(rawName, usedFileNames) + '.png';
+                const fileName = getUniqueFileName(rawName, usedFileNames) + ext;
                 try {
-                    const blob = await generateQRCodeBlob(lineData, imageSize, true, true);
+                    const blob = format === 'svg'
+                        ? await generateQRCodeSVG(lineData, imageSize, showCenterLabel)
+                        : await generateQRCodeBlob(lineData, imageSize, true, true, showCenterLabel);
                     zip.file(fileName, blob);
                     successCount++;
                     // update progress and yield briefly to allow UI update on large batches
@@ -538,9 +551,11 @@ async function handleGenerate() {
                 const rawName = template
                     ? resolveTemplate(template, lineData.parsedLine, headers, i + 1, padding, timestamp)
                     : `${baseName}_${fileNumber}`;
-                const fileName = getUniqueFileName(rawName, usedFileNames) + '.png';
+                const fileName = getUniqueFileName(rawName, usedFileNames) + ext;
                 try {
-                    const blob = await generateQRCodeBlob(lineData, imageSize, true, true);
+                    const blob = format === 'svg'
+                        ? await generateQRCodeSVG(lineData, imageSize, showCenterLabel)
+                        : await generateQRCodeBlob(lineData, imageSize, true, true, showCenterLabel);
                     const url = URL.createObjectURL(blob);
                     lastDownloadId = await new Promise((resolve, reject) => {
                         chrome.downloads.download({
@@ -594,7 +609,7 @@ async function handleGenerate() {
     }
 }
 
-async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText) {
+async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBottomText, showCenterLabel) {
     const bgColor = rgbToHex(elements.bgColorBtn.style.backgroundColor) || DEFAULT_BG_COLOR;
     const fgColor = rgbToHex(elements.fgColorBtn.style.backgroundColor) || DEFAULT_FG_COLOR;
 
@@ -616,7 +631,7 @@ async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBo
                 let finalCanvas = qrCanvas;
 
                 // Draw center label (Pax Cultura symbol)
-                drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor);
+                drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor, showCenterLabel);
 
                 // Add text if requested and available
                 if ((includeTopText && lineData.topText) || (includeBottomText && lineData.bottomText)) {
@@ -636,6 +651,121 @@ async function generateQRCodeBlob(lineData, imageSize, includeTopText, includeBo
             }
         });
     });
+}
+
+async function generateQRCodeSVG(lineData, imageSize, showCenterLabel) {
+    const bgColor = rgbToHex(elements.bgColorBtn.style.backgroundColor) || DEFAULT_BG_COLOR;
+    const fgColor = rgbToHex(elements.fgColorBtn.style.backgroundColor) || DEFAULT_FG_COLOR;
+
+    const svgString = await QRCode.toString(lineData.url, {
+        type: 'svg',
+        width: imageSize,
+        color: { dark: fgColor, light: bgColor }
+    });
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgString, 'image/svg+xml');
+    const svg = doc.documentElement;
+
+    // viewBox coordinate space may differ from imageSize (e.g. "0 0 41 41")
+    const viewBoxAttr = svg.getAttribute('viewBox') || `0 0 ${imageSize} ${imageSize}`;
+    const svgSize = parseFloat(viewBoxAttr.trim().split(/\s+/)[2]);
+
+    // Typography — same ratios as PNG path, in SVG user units
+    const fontSize = svgSize * 0.08;
+    const lineHeight = fontSize * 1.3;
+    const padding = svgSize * 0.01;
+    const maxTextWidth = svgSize - padding * 2;
+
+    const topLines = lineData.topText
+        ? wrapTextToSVGWidth(lineData.topText, maxTextWidth, fontSize, viewBoxAttr, imageSize)
+        : [];
+    const bottomLines = lineData.bottomText
+        ? wrapTextToSVGWidth(lineData.bottomText, maxTextWidth, fontSize, viewBoxAttr, imageSize)
+        : [];
+
+    const topHeight = topLines.length > 0 ? padding + topLines.length * lineHeight + padding : 0;
+    const bottomHeight = bottomLines.length > 0 ? padding + bottomLines.length * lineHeight + padding : 0;
+
+    // qrContainer: where QR content and center label live.
+    // When text is present, wrap existing SVG children in a <g> shifted down by topHeight.
+    const ns = 'http://www.w3.org/2000/svg';
+    let qrContainer;
+    if (topHeight > 0 || bottomHeight > 0) {
+        const newViewBoxHeight = svgSize + topHeight + bottomHeight;
+        svg.setAttribute('viewBox', `0 0 ${svgSize} ${newViewBoxHeight}`);
+        const renderedWidth = parseFloat(svg.getAttribute('width')) || imageSize;
+        svg.setAttribute('height', Math.round(renderedWidth * newViewBoxHeight / svgSize));
+
+        const g = doc.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', `translate(0, ${topHeight})`);
+        // Move all existing QR children into <g> first, then add bg + g to svg
+        while (svg.firstChild) g.appendChild(svg.firstChild);
+
+        // Full-canvas background so text regions aren't transparent
+        const fullBg = doc.createElementNS(ns, 'rect');
+        fullBg.setAttribute('x', 0);
+        fullBg.setAttribute('y', 0);
+        fullBg.setAttribute('width', svgSize);
+        fullBg.setAttribute('height', newViewBoxHeight);
+        fullBg.setAttribute('fill', bgColor);
+        svg.appendChild(fullBg);
+        svg.appendChild(g);
+        qrContainer = g;
+    } else {
+        qrContainer = svg;
+    }
+
+    if (showCenterLabel) {
+        addCenterLabelToSVG(qrContainer, svgSize, fgColor, bgColor);
+    }
+
+    const cx = svgSize / 2;
+    // fontSize * 0.8 ≈ ascender height: baseline = top-of-area + 0.8*fontSize
+    // Each <text> also gets x/y as fallback for renderers that ignore <tspan y>.
+    const capOffset = fontSize * 0.8;
+
+    if (topLines.length > 0) {
+        const baseY = padding + capOffset;
+        const textEl = doc.createElementNS(ns, 'text');
+        textEl.setAttribute('x', cx);
+        textEl.setAttribute('y', baseY);
+        textEl.setAttribute('font-size', fontSize);
+        textEl.setAttribute('font-family', 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif');
+        textEl.setAttribute('fill', fgColor);
+        textEl.setAttribute('text-anchor', 'middle');
+        topLines.forEach((line, i) => {
+            const tspan = doc.createElementNS(ns, 'tspan');
+            tspan.setAttribute('x', cx);
+            tspan.setAttribute('y', baseY + i * lineHeight);
+            tspan.textContent = line;
+            textEl.appendChild(tspan);
+        });
+        svg.appendChild(textEl);
+    }
+
+    if (bottomLines.length > 0) {
+        const baseY = svgSize + topHeight + padding + capOffset;
+        const textEl = doc.createElementNS(ns, 'text');
+        textEl.setAttribute('x', cx);
+        textEl.setAttribute('y', baseY);
+        textEl.setAttribute('font-size', fontSize);
+        textEl.setAttribute('font-family', 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif');
+        textEl.setAttribute('fill', fgColor);
+        textEl.setAttribute('text-anchor', 'middle');
+        bottomLines.forEach((line, i) => {
+            const tspan = doc.createElementNS(ns, 'tspan');
+            tspan.setAttribute('x', cx);
+            tspan.setAttribute('y', baseY + i * lineHeight);
+            tspan.textContent = line;
+            textEl.appendChild(tspan);
+        });
+        svg.appendChild(textEl);
+    }
+
+    const serializer = new XMLSerializer();
+    const svgText = serializer.serializeToString(svg);
+    return new Blob([svgText], { type: 'image/svg+xml' });
 }
 
 function createCompositeCanvas(qrCanvas, lineData, imageSize, includeTopText, includeBottomText, fgColor, bgColor) {
@@ -730,8 +860,34 @@ function wrapTextToWidth(ctx, text, maxWidth) {
     return lines;
 }
 
-function drawCenterLabel(ctx, size, fgColor, bgColor) {
-    if (!ENABLE_CENTER_LABEL) return;
+function wrapTextToSVGWidth(text, maxWidth, fontSize, viewBox, imageSize) {
+    // Canvas measurement is reliable without DOM layout; convert SVG user units to px via scale.
+    // scale = imageSize / svgSize: the actual pixel-per-user-unit ratio of the rendered SVG.
+    const svgSize = parseFloat(viewBox.trim().split(/\s+/)[2]);
+    const scale = imageSize / svgSize;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.font = `${fontSize * scale}px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif`;
+    const maxPx = maxWidth * scale;
+
+    const lines = [];
+    let currentLine = '';
+
+    for (const ch of text) {
+        const next = currentLine + ch;
+        if (ctx.measureText(next).width <= maxPx || currentLine.length === 0) {
+            currentLine = next;
+        } else {
+            lines.push(currentLine);
+            currentLine = ch;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+}
+
+function drawCenterLabel(ctx, size, fgColor, bgColor, showCenterLabel) {
+    if (!showCenterLabel) return;
 
     const r       = size * 0.07; // 14% diameter — safe under QR EC level M (15% area tolerance)
     const cx      = size / 2;
@@ -761,6 +917,47 @@ function drawCenterLabel(ctx, size, fgColor, bgColor) {
         ctx.beginPath();
         ctx.arc(cx + dx * dotDist, cy + dy * dotDist, dotR, 0, Math.PI * 2);
         ctx.fill();
+    });
+}
+
+function addCenterLabelToSVG(container, size, fgColor, bgColor) {
+    const doc = container.ownerDocument;
+    const ns = 'http://www.w3.org/2000/svg';
+    const r = size * 0.07;
+    const cx = size / 2;
+    const cy = size / 2;
+    const pad = r * 0.15;
+    const cornerR = r * 0.22;
+    const sw = r * 0.13;
+    const dotR = r * 0.24;
+    const dotDist = r * 0.47;
+
+    const bg = doc.createElementNS(ns, 'rect');
+    bg.setAttribute('x', cx - r - pad);
+    bg.setAttribute('y', cy - r - pad);
+    bg.setAttribute('width', (r + pad) * 2);
+    bg.setAttribute('height', (r + pad) * 2);
+    bg.setAttribute('rx', cornerR);
+    bg.setAttribute('ry', cornerR);
+    bg.setAttribute('fill', bgColor);
+    container.appendChild(bg);
+
+    const ring = doc.createElementNS(ns, 'circle');
+    ring.setAttribute('cx', cx);
+    ring.setAttribute('cy', cy);
+    ring.setAttribute('r', r - sw / 2);
+    ring.setAttribute('stroke', fgColor);
+    ring.setAttribute('stroke-width', sw);
+    ring.setAttribute('fill', 'none');
+    container.appendChild(ring);
+
+    [[0, -1], [-0.866, 0.5], [0.866, 0.5]].forEach(([dx, dy]) => {
+        const dot = doc.createElementNS(ns, 'circle');
+        dot.setAttribute('cx', cx + dx * dotDist);
+        dot.setAttribute('cy', cy + dy * dotDist);
+        dot.setAttribute('r', dotR);
+        dot.setAttribute('fill', fgColor);
+        container.appendChild(dot);
     });
 }
 
@@ -822,6 +1019,8 @@ function lockUI() {
         elements.mappingTitle,
         elements.mappingFooter,
         elements.filenameTemplateInput,
+        elements.centerLabelCheckbox,
+        elements.outputFormatSelect,
     ];
 
     controls.forEach(control => {
@@ -832,7 +1031,7 @@ function lockUI() {
 function unlockUI() {
     elements.generateBtn.disabled = false;
     updateGenerateButtonText();
-    
+
     // Re-enable all form controls
     const controls = [
         elements.separatorInput,
@@ -844,6 +1043,8 @@ function unlockUI() {
         elements.mappingTitle,
         elements.mappingFooter,
         elements.filenameTemplateInput,
+        elements.centerLabelCheckbox,
+        elements.outputFormatSelect,
     ];
 
     controls.forEach(control => {
@@ -1006,7 +1207,7 @@ async function generatePreviewQR(url, imageSize, topText, bottomText, includeTop
         canvas.height = qrCanvas.height;
 
         // Draw center label (Pax Cultura symbol)
-        drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor);
+        drawCenterLabel(qrCanvas.getContext('2d'), imageSize, fgColor, bgColor, elements.centerLabelCheckbox.checked);
 
         let finalCanvas = qrCanvas;
 
@@ -1258,6 +1459,23 @@ function saveColors() {
     }
 }
 
+function restoreOutputFormat() {
+    chrome.storage.local.get(['outputFormat'], (result) => {
+        if (result.outputFormat) {
+            elements.outputFormatSelect.value = result.outputFormat;
+        }
+    });
+}
+
+function restoreShowCenterLabel() {
+    chrome.storage.local.get(['showCenterLabel'], (result) => {
+        if (result.showCenterLabel !== undefined) {
+            elements.centerLabelCheckbox.checked = result.showCenterLabel;
+        }
+        renderPreview();
+    });
+}
+
 function restoreColorSettings() {
     chrome.storage.local.get(['qrBackgroundColor', 'qrForegroundColor'], (result) => {
         if (result.qrBackgroundColor) {
@@ -1285,8 +1503,6 @@ function restoreTextareaContent() {
         if (result.textareaContent) {
             elements.dataTextarea.value = result.textareaContent;
             updateCSVControls();
-            updateGenerateButtonText();
-            checkAndRenderPreview();
         }
         restoreColumnMapping();
     });
@@ -1320,6 +1536,8 @@ function restoreColumnMapping() {
         }
 
         updateGenerateBtn();
+        updateGenerateButtonText();
+        renderPreview();
     });
 }
 
@@ -1352,4 +1570,6 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreTextareaContent();    // calls restoreColumnMapping() in its callback
     restoreFilenameTemplate();
     restoreColorSettings();
+    restoreShowCenterLabel();
+    restoreOutputFormat();
 });

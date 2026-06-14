@@ -88,17 +88,31 @@
         <!-- Advanced Settings -->
         <div class="advanced-settings">
             <h3>Advanced Settings</h3>
+            <div class="advanced-row">
+                <div class="control-group">
+                    <label for="image-size-input">Image Size (px):</label>
+                    <select id="image-size-input">
+                        <option value="64">64</option>
+                        <option value="128">128</option>
+                        <option value="256">256</option>
+                        <option value="512" selected>512</option>
+                        <option value="1024">1024</option>
+                        <option value="2048">2048</option>
+                        <option value="4096">4096</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="output-format-select">Output format:</label>
+                    <select id="output-format-select">
+                        <option value="png">PNG</option>
+                        <option value="svg">SVG</option>
+                    </select>
+                </div>
+            </div>
             <div class="control-group">
-                <label for="image-size-input">Image Size (px):</label>
-                <select id="image-size-input">
-                    <option value="64">64</option>
-                    <option value="128">128</option>
-                    <option value="256">256</option>
-                    <option value="512" selected>512</option>
-                    <option value="1024">1024</option>
-                    <option value="2048">2048</option>
-                    <option value="4096">4096</option>
-                </select>
+                <label class="has-header-label">
+                    <input type="checkbox" id="center-label-checkbox" checked> Center label (Pax Cultura)
+                </label>
             </div>
         </div>
     </div>
