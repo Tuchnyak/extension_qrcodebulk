@@ -689,6 +689,7 @@ async function generateQRCodeSVG(lineData, imageSize, showCenterLabel) {
 
     // qrContainer: where QR content and center label live.
     // When text is present, wrap existing SVG children in a <g> shifted down by topHeight.
+    const ns = 'http://www.w3.org/2000/svg';
     let qrContainer;
     if (topHeight > 0 || bottomHeight > 0) {
         const newViewBoxHeight = svgSize + topHeight + bottomHeight;
@@ -698,7 +699,17 @@ async function generateQRCodeSVG(lineData, imageSize, showCenterLabel) {
 
         const g = doc.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.setAttribute('transform', `translate(0, ${topHeight})`);
+        // Move all existing QR children into <g> first, then add bg + g to svg
         while (svg.firstChild) g.appendChild(svg.firstChild);
+
+        // Full-canvas background so text regions aren't transparent
+        const fullBg = doc.createElementNS(ns, 'rect');
+        fullBg.setAttribute('x', 0);
+        fullBg.setAttribute('y', 0);
+        fullBg.setAttribute('width', svgSize);
+        fullBg.setAttribute('height', newViewBoxHeight);
+        fullBg.setAttribute('fill', bgColor);
+        svg.appendChild(fullBg);
         svg.appendChild(g);
         qrContainer = g;
     } else {
@@ -709,22 +720,21 @@ async function generateQRCodeSVG(lineData, imageSize, showCenterLabel) {
         addCenterLabelToSVG(qrContainer, svgSize, fgColor, bgColor);
     }
 
-    const ns = 'http://www.w3.org/2000/svg';
     const cx = svgSize / 2;
+    // Use explicit y per tspan instead of dominant-baseline for cross-renderer compatibility.
+    // fontSize * 0.75 approximates cap-height: places the top of glyphs near the desired y.
+    const capOffset = fontSize * 0.75;
 
     if (topLines.length > 0) {
         const textEl = doc.createElementNS(ns, 'text');
-        textEl.setAttribute('x', cx);
-        textEl.setAttribute('y', padding);
         textEl.setAttribute('font-size', fontSize);
         textEl.setAttribute('font-family', 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif');
         textEl.setAttribute('fill', fgColor);
         textEl.setAttribute('text-anchor', 'middle');
-        textEl.setAttribute('dominant-baseline', 'hanging');
         topLines.forEach((line, i) => {
             const tspan = doc.createElementNS(ns, 'tspan');
             tspan.setAttribute('x', cx);
-            tspan.setAttribute('dy', i === 0 ? 0 : lineHeight);
+            tspan.setAttribute('y', padding + capOffset + i * lineHeight);
             tspan.textContent = line;
             textEl.appendChild(tspan);
         });
@@ -733,17 +743,14 @@ async function generateQRCodeSVG(lineData, imageSize, showCenterLabel) {
 
     if (bottomLines.length > 0) {
         const textEl = doc.createElementNS(ns, 'text');
-        textEl.setAttribute('x', cx);
-        textEl.setAttribute('y', svgSize + topHeight + padding);
         textEl.setAttribute('font-size', fontSize);
         textEl.setAttribute('font-family', 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif');
         textEl.setAttribute('fill', fgColor);
         textEl.setAttribute('text-anchor', 'middle');
-        textEl.setAttribute('dominant-baseline', 'hanging');
         bottomLines.forEach((line, i) => {
             const tspan = doc.createElementNS(ns, 'tspan');
             tspan.setAttribute('x', cx);
-            tspan.setAttribute('dy', i === 0 ? 0 : lineHeight);
+            tspan.setAttribute('y', svgSize + topHeight + padding + capOffset + i * lineHeight);
             tspan.textContent = line;
             textEl.appendChild(tspan);
         });
